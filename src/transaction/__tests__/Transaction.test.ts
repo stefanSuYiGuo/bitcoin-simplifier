@@ -5,8 +5,8 @@ import {TransactionSigner} from '../TransactionSigner'
 import {Wallet} from '../../wallet/Wallet'
 
 describe('Transaction', () => {
-  describe('构造函数', () => {
-    it('应该创建有效的交易', () => {
+  describe('constructor', () => {
+    it('creates a valid transaction', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -17,21 +17,21 @@ describe('Transaction', () => {
       expect(tx.timestamp).toBeDefined()
     })
 
-    it('应该拒绝没有输入的交易', () => {
+    it('rejects a transaction without inputs', () => {
       const output = new TxOutput(50, 'receiver_address')
       expect(() => new Transaction([], [output])).toThrow(
-        '交易必须至少有一个输入'
+        'Transaction must have at least one input'
       )
     })
 
-    it('应该拒绝没有输出的交易', () => {
+    it('rejects a transaction without outputs', () => {
       const input = new TxInput('prev_tx_id', 0)
       expect(() => new Transaction([input], [])).toThrow(
-        '交易必须至少有一个输出'
+        'Transaction must have at least one output'
       )
     })
 
-    it('应该为每个交易生成唯一的 ID', () => {
+    it('generates a unique ID for each transaction', () => {
       const input1 = new TxInput('prev_tx_id_1', 0)
       const output1 = new TxOutput(50, 'receiver_address')
       const tx1 = new Transaction([input1], [output1])
@@ -44,8 +44,8 @@ describe('Transaction', () => {
     })
   })
 
-  describe('金额计算', () => {
-    it('应该正确计算输出总额', () => {
+  describe('amount calculations', () => {
+    it('calculates the total output amount', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output1 = new TxOutput(30, 'address1')
       const output2 = new TxOutput(20, 'address2')
@@ -54,7 +54,7 @@ describe('Transaction', () => {
       expect(tx.getOutputAmount()).toBe(50)
     })
 
-    it('应该正确计算输入总额', () => {
+    it('calculates the total input amount', () => {
       const input1 = new TxInput('prev_tx_id_1', 0)
       const input2 = new TxInput('prev_tx_id_2', 0)
       const output = new TxOutput(50, 'receiver_address')
@@ -67,7 +67,7 @@ describe('Transaction', () => {
       expect(tx.getInputAmount(utxoSet)).toBe(55)
     })
 
-    it('应该正确计算矿工费', () => {
+    it('calculates the mining fee', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(45, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -79,8 +79,8 @@ describe('Transaction', () => {
     })
   })
 
-  describe('交易验证', () => {
-    it('应该验证有效交易', () => {
+  describe('transaction validation', () => {
+    it('accepts a valid transaction', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(45, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -91,7 +91,7 @@ describe('Transaction', () => {
       expect(tx.isValid(utxoSet)).toBe(true)
     })
 
-    it('应该拒绝输入金额小于输出金额的交易', () => {
+    it('rejects a transaction whose outputs exceed its inputs', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(55, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -102,14 +102,14 @@ describe('Transaction', () => {
       expect(tx.isValid(utxoSet)).toBe(false)
     })
 
-    it('应该拒绝输出金额为负数的交易', () => {
+    it('rejects a negative output amount', () => {
       const input = new TxInput('prev_tx_id', 0)
       expect(() => new TxOutput(-10, 'receiver_address')).toThrow(
-        '输出金额必须大于 0'
+        'Output amount must be greater than 0'
       )
     })
 
-    it('应该拒绝引用不存在的 UTXO', () => {
+    it('rejects a reference to a missing UTXO', () => {
       const input = new TxInput('non_existent_tx', 0)
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -120,8 +120,8 @@ describe('Transaction', () => {
     })
   })
 
-  describe('Coinbase 交易', () => {
-    it('应该创建 Coinbase 交易', () => {
+  describe('coinbase transactions', () => {
+    it('creates a coinbase transaction', () => {
       const coinbase = Transaction.createCoinbase('miner_address', 50, 1)
 
       expect(coinbase.isCoinbase()).toBe(true)
@@ -131,7 +131,7 @@ describe('Transaction', () => {
       expect(coinbase.outputs[0].address).toBe('miner_address')
     })
 
-    it('Coinbase 交易应该有特殊的输入 txId', () => {
+    it('uses the special input transaction ID for a coinbase transaction', () => {
       const coinbase = Transaction.createCoinbase('miner_address', 50)
 
       expect(coinbase.inputs[0].txId).toBe(
@@ -139,7 +139,7 @@ describe('Transaction', () => {
       )
     })
 
-    it('普通交易不应该被识别为 Coinbase', () => {
+    it('does not identify a regular transaction as coinbase', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -148,8 +148,8 @@ describe('Transaction', () => {
     })
   })
 
-  describe('序列化和反序列化', () => {
-    it('应该正确序列化为 JSON', () => {
+  describe('serialization and deserialization', () => {
+    it('serializes to JSON', () => {
       const input = new TxInput('prev_tx_id', 0, 'signature', 'publicKey')
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output], 1234567890)
@@ -162,7 +162,7 @@ describe('Transaction', () => {
       expect(json.timestamp).toBe(1234567890)
     })
 
-    it('应该正确从 JSON 反序列化', () => {
+    it('deserializes from JSON', () => {
       const json = {
         inputs: [
           {
@@ -190,7 +190,7 @@ describe('Transaction', () => {
       expect(tx.timestamp).toBe(1234567890)
     })
 
-    it('序列化和反序列化应该保持一致', () => {
+    it('preserves transaction data across serialization', () => {
       const input = new TxInput('prev_tx_id', 0, 'signature', 'publicKey')
       const output = new TxOutput(50, 'receiver_address')
       const originalTx = new Transaction([input], [output])
@@ -204,8 +204,8 @@ describe('Transaction', () => {
     })
   })
 
-  describe('交易签名和验证', () => {
-    it('应该能够签名交易', () => {
+  describe('transaction signing and verification', () => {
+    it('signs a transaction', () => {
       const wallet = new Wallet()
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(50, 'receiver_address')
@@ -220,29 +220,29 @@ describe('Transaction', () => {
       expect(tx.inputs[0].publicKey).toBe(wallet.publicKey)
     })
 
-    it('应该能够验证已签名的交易', () => {
+    it('verifies a signed transaction', () => {
       const wallet = new Wallet()
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(45, 'receiver_address')
       const tx = new Transaction([input], [output])
 
-      // 准备 UTXO 集合
+      // Prepare the UTXO set
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('prev_tx_id:0', {
         amount: 50,
         address: wallet.address,
       })
 
-      // 签名交易
+      // Sign the transaction
       TransactionSigner.signTransaction(tx, wallet)
 
-      // 验证交易
+      // Verify the transaction
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
 
       expect(isValid).toBe(true)
     })
 
-    it('应该拒绝未签名的交易', () => {
+    it('rejects an unsigned transaction', () => {
       const wallet = new Wallet()
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(45, 'receiver_address')
@@ -254,13 +254,13 @@ describe('Transaction', () => {
         address: wallet.address,
       })
 
-      // 不签名，直接验证
+      // Verify without signing
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
 
       expect(isValid).toBe(false)
     })
 
-    it('应该拒绝签名无效的交易', () => {
+    it('rejects a transaction with an invalid signature', () => {
       const wallet = new Wallet()
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(45, 'receiver_address')
@@ -272,19 +272,19 @@ describe('Transaction', () => {
         address: wallet.address,
       })
 
-      // 签名交易
+      // Sign the transaction
       TransactionSigner.signTransaction(tx, wallet)
 
-      // 篡改交易内容
+      // Tamper with the transaction content
       tx.outputs[0] = new TxOutput(100, 'attacker_address')
 
-      // 验证应该失败
+      // Verification should fail
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
 
       expect(isValid).toBe(false)
     })
 
-    it('应该拒绝使用错误公钥的交易', () => {
+    it('rejects a transaction signed with the wrong public key', () => {
       const aliceWallet = new Wallet()
       const bobWallet = new Wallet()
 
@@ -292,25 +292,25 @@ describe('Transaction', () => {
       const output = new TxOutput(45, bobWallet.address)
       const tx = new Transaction([input], [output])
 
-      // Alice 拥有这个 UTXO
+      // Alice owns this UTXO
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('prev_tx_id:0', {
         amount: 50,
         address: aliceWallet.address,
       })
 
-      // Bob 尝试签名（使用他自己的私钥）
+      // Bob attempts to sign with his own private key
       TransactionSigner.signTransaction(tx, bobWallet)
 
-      // 验证应该失败，因为公钥不匹配 UTXO 所有者
+      // Verification should fail because the public key does not match the UTXO owner
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
 
       expect(isValid).toBe(false)
     })
   })
 
-  describe('交易克隆', () => {
-    it('应该能够克隆交易', () => {
+  describe('transaction cloning', () => {
+    it('clones a transaction', () => {
       const input = new TxInput('prev_tx_id', 0, 'signature', 'publicKey')
       const output = new TxOutput(50, 'receiver_address')
       const originalTx = new Transaction([input], [output])
@@ -321,14 +321,14 @@ describe('Transaction', () => {
       expect(clonedTx.inputs[0].txId).toBe(originalTx.inputs[0].txId)
       expect(clonedTx.outputs[0].amount).toBe(originalTx.outputs[0].amount)
 
-      // 修改克隆不应该影响原交易
+      // Changing the clone should not affect the original transaction
       clonedTx.inputs[0].signature = 'new_signature'
       expect(originalTx.inputs[0].signature).toBe('signature')
     })
   })
 
-  describe('获取用于签名的内容', () => {
-    it('应该返回不包含签名的交易内容', () => {
+  describe('signing content', () => {
+    it('returns transaction content without signature data', () => {
       const input = new TxInput('prev_tx_id', 0, 'signature', 'publicKey')
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -336,18 +336,18 @@ describe('Transaction', () => {
       const content = tx.getContentForSigning()
       const parsed = JSON.parse(content)
 
-      // 签名内容不应该包含签名和公钥
+      // Signing content should exclude signatures and public keys
       expect(parsed.inputs[0].signature).toBeUndefined()
       expect(parsed.inputs[0].publicKey).toBeUndefined()
 
-      // 应该包含基本信息
+      // It should retain the core transaction data
       expect(parsed.inputs[0].txId).toBe('prev_tx_id')
       expect(parsed.outputs[0].amount).toBe(50)
     })
   })
 
   describe('toString', () => {
-    it('应该返回可读的字符串表示', () => {
+    it('returns a readable string representation', () => {
       const input = new TxInput('prev_tx_id', 0)
       const output = new TxOutput(50, 'receiver_address')
       const tx = new Transaction([input], [output])
@@ -361,46 +361,46 @@ describe('Transaction', () => {
     })
   })
 
-  describe('多方交易签名', () => {
-    it('应该支持不同输入由不同钱包签名', () => {
+  describe('multi-party transaction signing', () => {
+    it('supports signing different inputs with different wallets', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const charlie = new Wallet()
 
-      // 创建一个有多个输入的交易
-      // Alice 有一个 UTXO：50 BTC
-      // Bob 有一个 UTXO：30 BTC
-      // 他们合作向 Charlie 转账 75 BTC
+      // Create a transaction with multiple inputs
+      // Alice has a 50 BTC UTXO
+      // Bob has a 30 BTC UTXO
+      // Together they send 75 BTC to Charlie
       const input1 = new TxInput('tx_alice', 0)
       const input2 = new TxInput('tx_bob', 0)
       const output1 = new TxOutput(75, charlie.address)
-      const output2 = new TxOutput(5, alice.address) // 找零给 Alice
+      const output2 = new TxOutput(5, alice.address) // Return change to Alice
 
       const tx = new Transaction([input1, input2], [output1, output2])
 
-      // 准备 UTXO 集合
+      // Prepare the UTXO set
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('tx_alice:0', {amount: 50, address: alice.address})
       utxoSet.set('tx_bob:0', {amount: 30, address: bob.address})
 
-      // 使用不同钱包签名不同输入
+      // Sign each input with a different wallet
       TransactionSigner.signTransactionWithWallets(tx, [alice, bob])
 
-      // 验证每个输入的签名都不同
+      // Confirm that each input has a distinct signature
       expect(tx.inputs[0].signature).toBeDefined()
       expect(tx.inputs[1].signature).toBeDefined()
       expect(tx.inputs[0].signature).not.toBe(tx.inputs[1].signature)
 
-      // 验证每个输入的公钥不同
+      // Confirm that each input has a distinct public key
       expect(tx.inputs[0].publicKey).toBe(alice.publicKey)
       expect(tx.inputs[1].publicKey).toBe(bob.publicKey)
 
-      // 验证交易
+      // Verify the transaction
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
       expect(isValid).toBe(true)
     })
 
-    it('应该支持使用钱包映射签名', () => {
+    it('supports signing with a wallet map', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const charlie = new Wallet()
@@ -411,28 +411,28 @@ describe('Transaction', () => {
 
       const tx = new Transaction([input1, input2], [output])
 
-      // 准备 UTXO 集合
+      // Prepare the UTXO set
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('tx_alice:0', {amount: 50, address: alice.address})
       utxoSet.set('tx_bob:0', {amount: 30, address: bob.address})
 
-      // 创建钱包映射
+      // Create the wallet map
       const walletMap = new Map<string, Wallet>()
       walletMap.set(alice.address, alice)
       walletMap.set(bob.address, bob)
 
-      // 使用钱包映射签名
+      // Sign with the wallet map
       TransactionSigner.signTransactionWithWalletMap(tx, walletMap, utxoSet)
 
-      // 验证签名不同
+      // Confirm that the signatures differ
       expect(tx.inputs[0].signature).not.toBe(tx.inputs[1].signature)
 
-      // 验证交易
+      // Verify the transaction
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
       expect(isValid).toBe(true)
     })
 
-    it('应该支持单个输入签名', () => {
+    it('supports signing one input at a time', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const charlie = new Wallet()
@@ -443,24 +443,24 @@ describe('Transaction', () => {
 
       const tx = new Transaction([input1, input2], [output])
 
-      // Alice 先签名她的输入
+      // Alice signs her input first
       const success1 = TransactionSigner.signInput(tx, 0, alice)
       expect(success1).toBe(true)
       expect(tx.inputs[0].isSigned()).toBe(true)
       expect(tx.inputs[1].isSigned()).toBe(false)
 
-      // Bob 再签名他的输入
+      // Bob then signs his input
       const success2 = TransactionSigner.signInput(tx, 1, bob)
       expect(success2).toBe(true)
       expect(tx.inputs[1].isSigned()).toBe(true)
 
-      // 两个签名应该不同
+      // The two signatures should differ
       expect(tx.inputs[0].signature).not.toBe(tx.inputs[1].signature)
       expect(tx.inputs[0].publicKey).toBe(alice.publicKey)
       expect(tx.inputs[1].publicKey).toBe(bob.publicKey)
     })
 
-    it('signTransactionWithWallets 应该拒绝钱包数量不匹配', () => {
+    it('rejects a mismatched wallet count in signTransactionWithWallets', () => {
       const alice = new Wallet()
       const bob = new Wallet()
 
@@ -470,13 +470,13 @@ describe('Transaction', () => {
 
       const tx = new Transaction([input1, input2], [output])
 
-      // 只提供一个钱包，但有两个输入
+      // Provide only one wallet for two inputs
       expect(() => {
         TransactionSigner.signTransactionWithWallets(tx, [alice])
-      }).toThrow('钱包数量')
+      }).toThrow('Wallet count')
     })
 
-    it('signTransactionWithWalletMap 应该拒绝找不到钱包', () => {
+    it('rejects a missing wallet in signTransactionWithWalletMap', () => {
       const alice = new Wallet()
       const bob = new Wallet()
 
@@ -486,51 +486,51 @@ describe('Transaction', () => {
 
       const tx = new Transaction([input1, input2], [output])
 
-      // 准备 UTXO 集合
+      // Prepare the UTXO set
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('tx_alice:0', {amount: 50, address: alice.address})
       utxoSet.set('tx_bob:0', {amount: 30, address: bob.address})
 
-      // 只提供 Alice 的钱包，缺少 Bob 的
+      // Provide Alice's wallet but omit Bob's
       const walletMap = new Map<string, Wallet>()
       walletMap.set(alice.address, alice)
 
       expect(() => {
         TransactionSigner.signTransactionWithWalletMap(tx, walletMap, utxoSet)
-      }).toThrow('没有找到地址')
+      }).toThrow('No wallet found for address')
     })
 
-    it('多方交易实际场景：Alice 和 Bob 合买一件商品', () => {
+    it('supports Alice and Bob jointly purchasing an item', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const merchant = new Wallet()
 
-      // Alice 有 40 BTC，Bob 有 35 BTC
-      // 商品价格 70 BTC，他们合作购买
+      // Alice has 40 BTC and Bob has 35 BTC
+      // They jointly purchase an item priced at 70 BTC
       const input1 = new TxInput('tx_alice_prev', 0)
       const input2 = new TxInput('tx_bob_prev', 0)
-      const output1 = new TxOutput(70, merchant.address) // 支付给商家
-      const output2 = new TxOutput(5, alice.address) // 找零给 Alice
+      const output1 = new TxOutput(70, merchant.address) // Pay the merchant
+      const output2 = new TxOutput(5, alice.address) // Return change to Alice
 
       const tx = new Transaction([input1, input2], [output1, output2])
 
-      // 准备 UTXO 集合
+      // Prepare the UTXO set
       const utxoSet = new Map<string, {amount: number; address: string}>()
       utxoSet.set('tx_alice_prev:0', {amount: 40, address: alice.address})
       utxoSet.set('tx_bob_prev:0', {amount: 35, address: bob.address})
 
-      // Alice 和 Bob 分别签名各自的输入
+      // Alice and Bob each sign their own input
       TransactionSigner.signInput(tx, 0, alice)
       TransactionSigner.signInput(tx, 1, bob)
 
-      // 检查签名确实不同
+      // Confirm that the signatures differ
       expect(tx.inputs[0].signature).not.toBe(tx.inputs[1].signature)
 
-      // 验证整个交易
+      // Verify the complete transaction
       const isValid = TransactionSigner.verifyTransaction(tx, utxoSet)
       expect(isValid).toBe(true)
 
-      // 验证金额
+      // Verify the amounts
       expect(
         tx.getInputAmount(
           new Map([
