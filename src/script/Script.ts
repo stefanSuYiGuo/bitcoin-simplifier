@@ -1,6 +1,6 @@
 /**
- * 比特币脚本执行引擎
- * 实现基于栈的脚本语言解释器
+ * Bitcoin Script execution engine.
+ * Implements a stack-based scripting language interpreter.
  */
 
 import {Stack, StackElement, StackUtils} from './Stack'
@@ -14,39 +14,39 @@ import {Hash} from '../crypto'
 import {Signature} from '../crypto/signature'
 
 /**
- * 脚本执行上下文
- * 包含签名验证所需的信息
+ * Script execution context.
+ * Contains information required for signature verification.
  */
 export interface ScriptContext {
-  /** 交易签名哈希（用于 CHECKSIG） */
+  /** Transaction signature hash used by CHECKSIG. */
   signatureHash?: string
-  /** 是否启用调试模式 */
+  /** Whether debug mode is enabled. */
   debug?: boolean
 }
 
 /**
- * 脚本执行结果
+ * Script execution result.
  */
 export interface ScriptResult {
-  /** 是否执行成功 */
+  /** Whether execution succeeded. */
   success: boolean
-  /** 错误信息（如果失败） */
+  /** Error message when execution fails. */
   error?: string
-  /** 最终栈状态 */
+  /** Final stack state. */
   stack: StackElement[]
-  /** 执行的操作数 */
+  /** Number of executed operations. */
   opCount: number
 }
 
 /**
- * 脚本元素：操作码或数据
+ * Script element containing an opcode or data.
  */
 export type ScriptElement =
   | {type: 'opcode'; code: OpCode}
   | {type: 'data'; data: string}
 
 /**
- * 比特币脚本类
+ * Bitcoin Script implementation.
  */
 export class Script {
   private elements: ScriptElement[] = []
@@ -58,7 +58,7 @@ export class Script {
   }
 
   /**
-   * 添加操作码
+   * Add an opcode.
    */
   addOpCode(code: OpCode): Script {
     this.elements.push({type: 'opcode', code})
@@ -66,7 +66,7 @@ export class Script {
   }
 
   /**
-   * 添加数据（自动选择合适的推送方式）
+   * Add data using the appropriate push operation automatically.
    */
   addData(data: string): Script {
     this.elements.push({type: 'data', data})
@@ -74,14 +74,14 @@ export class Script {
   }
 
   /**
-   * 获取脚本元素
+   * Get the script elements.
    */
   getElements(): ScriptElement[] {
     return [...this.elements]
   }
 
   /**
-   * 从十六进制字符串解析脚本
+   * Parse a script from a hexadecimal string.
    */
   static fromHex(hex: string): Script {
     const script = new Script()
@@ -91,12 +91,12 @@ export class Script {
     while (i < bytes.length) {
       const opcode = bytes[i]
 
-      // 数据推送操作码 (0x01-0x4b)
+      // Data-push opcodes (0x01-0x4b)
       if (isDataPushOpCode(opcode)) {
         const dataLen = opcode
         i++
         if (i + dataLen > bytes.length) {
-          throw new Error(`数据长度不足: 需要 ${dataLen} 字节`)
+          throw new Error(`Insufficient data: ${dataLen} bytes required`)
         }
         const data = bytes.slice(i, i + dataLen).toString('hex')
         script.addData(data)
@@ -105,11 +105,11 @@ export class Script {
       // OP_PUSHDATA1
       else if (opcode === OpCode.OP_PUSHDATA1) {
         i++
-        if (i >= bytes.length) throw new Error('OP_PUSHDATA1: 缺少长度字节')
+        if (i >= bytes.length) throw new Error('OP_PUSHDATA1: missing length byte')
         const dataLen = bytes[i]
         i++
         if (i + dataLen > bytes.length) {
-          throw new Error(`OP_PUSHDATA1: 数据长度不足`)
+          throw new Error(`OP_PUSHDATA1: insufficient data`)
         }
         const data = bytes.slice(i, i + dataLen).toString('hex')
         script.addData(data)
@@ -118,11 +118,11 @@ export class Script {
       // OP_PUSHDATA2
       else if (opcode === OpCode.OP_PUSHDATA2) {
         i++
-        if (i + 2 > bytes.length) throw new Error('OP_PUSHDATA2: 缺少长度字节')
+        if (i + 2 > bytes.length) throw new Error('OP_PUSHDATA2: missing length bytes')
         const dataLen = bytes.readUInt16LE(i)
         i += 2
         if (i + dataLen > bytes.length) {
-          throw new Error(`OP_PUSHDATA2: 数据长度不足`)
+          throw new Error(`OP_PUSHDATA2: insufficient data`)
         }
         const data = bytes.slice(i, i + dataLen).toString('hex')
         script.addData(data)
@@ -131,17 +131,17 @@ export class Script {
       // OP_PUSHDATA4
       else if (opcode === OpCode.OP_PUSHDATA4) {
         i++
-        if (i + 4 > bytes.length) throw new Error('OP_PUSHDATA4: 缺少长度字节')
+        if (i + 4 > bytes.length) throw new Error('OP_PUSHDATA4: missing length bytes')
         const dataLen = bytes.readUInt32LE(i)
         i += 4
         if (i + dataLen > bytes.length) {
-          throw new Error(`OP_PUSHDATA4: 数据长度不足`)
+          throw new Error(`OP_PUSHDATA4: insufficient data`)
         }
         const data = bytes.slice(i, i + dataLen).toString('hex')
         script.addData(data)
         i += dataLen
       }
-      // 其他操作码
+      // Other opcodes
       else {
         script.addOpCode(opcode as OpCode)
         i++
@@ -152,7 +152,7 @@ export class Script {
   }
 
   /**
-   * 序列化为十六进制字符串
+   * Serialize the script to a hexadecimal string.
    */
   toHex(): string {
     const parts: Buffer[] = []
@@ -165,7 +165,7 @@ export class Script {
         const len = data.length
 
         if (len <= 0x4b) {
-          // 直接使用长度作为操作码
+          // Use the length directly as the opcode
           parts.push(Buffer.from([len]))
         } else if (len <= 0xff) {
           parts.push(Buffer.from([OpCode.OP_PUSHDATA1, len]))
@@ -188,7 +188,7 @@ export class Script {
   }
 
   /**
-   * 转换为人类可读的字符串
+   * Convert the script to a human-readable string.
    */
   toAsm(): string {
     return this.elements
@@ -205,31 +205,31 @@ export class Script {
   }
 
   /**
-   * 从 ASM 字符串解析
+   * Parse a script from an ASM string.
    */
   static fromAsm(asm: string): Script {
     const script = new Script()
     const tokens = asm.split(/\s+/).filter((t) => t.length > 0)
 
     for (const token of tokens) {
-      // 数据 <hex>
+      // Data in <hex> form
       if (token.startsWith('<') && token.endsWith('>')) {
         const data = token.slice(1, -1).replace('...', '')
         script.addData(data)
       }
-      // 操作码
+      // Opcode
       else if (token.startsWith('OP_')) {
         const code = OpCode[token as keyof typeof OpCode]
         if (code === undefined) {
-          throw new Error(`未知操作码: ${token}`)
+          throw new Error(`Unknown opcode: ${token}`)
         }
         script.addOpCode(code)
       }
-      // 十六进制数据
+      // Hexadecimal data
       else if (/^[0-9a-fA-F]+$/.test(token)) {
         script.addData(token)
       } else {
-        throw new Error(`无法解析: ${token}`)
+        throw new Error(`Unable to parse: ${token}`)
       }
     }
 
@@ -237,13 +237,13 @@ export class Script {
   }
 
   /**
-   * 执行脚本
+   * Execute the script.
    */
   execute(context: ScriptContext = {}): ScriptResult {
     const stack = new Stack()
     const altStack = new Stack()
     let opCount = 0
-    const maxOps = 201 // 比特币限制
+    const maxOps = 201 // Bitcoin limit
 
     try {
       for (const element of this.elements) {
@@ -259,17 +259,17 @@ export class Script {
         opCount++
 
         if (opCount > maxOps) {
-          throw new Error(`超过最大操作数限制: ${maxOps}`)
+          throw new Error(`Maximum operation count exceeded: ${maxOps}`)
         }
 
         if (context.debug) {
-          console.log(`执行: ${getOpCodeName(opcode)}`)
+          console.log(`Execute: ${getOpCodeName(opcode)}`)
         }
 
         this.executeOpCode(opcode, stack, altStack, context)
       }
 
-      // 脚本成功：栈非空且栈顶为真
+      // A script succeeds when the stack is nonempty and its top item is true
       const success = !stack.isEmpty() && StackUtils.isTrue(stack.peek())
 
       return {
@@ -288,7 +288,7 @@ export class Script {
   }
 
   /**
-   * 执行单个操作码
+   * Execute a single opcode.
    */
   private executeOpCode(
     opcode: OpCode,
@@ -297,7 +297,7 @@ export class Script {
     context: ScriptContext
   ): void {
     switch (opcode) {
-      // ============ 常量 ============
+      // ============ Constants ============
       case OpCode.OP_0:
       case OpCode.OP_FALSE:
         stack.push('')
@@ -327,23 +327,23 @@ export class Script {
         stack.push(StackUtils.encodeNumber(getNumberFromOpCode(opcode)))
         break
 
-      // ============ 流程控制 ============
+      // ============ Flow control ============
       case OpCode.OP_NOP:
-        // 无操作
+        // No operation
         break
 
       case OpCode.OP_VERIFY: {
         const top = stack.pop()
         if (!StackUtils.isTrue(top)) {
-          throw new Error('OP_VERIFY 失败')
+          throw new Error('OP_VERIFY failed')
         }
         break
       }
 
       case OpCode.OP_RETURN:
-        throw new Error('OP_RETURN: 脚本无效')
+        throw new Error('OP_RETURN: invalid script')
 
-      // ============ 栈操作 ============
+      // ============ Stack operations ============
       case OpCode.OP_TOALTSTACK:
         altStack.push(stack.pop())
         break
@@ -424,7 +424,7 @@ export class Script {
         stack.swap2()
         break
 
-      // ============ 字符串操作 ============
+      // ============ String operations ============
       case OpCode.OP_SIZE: {
         const top = stack.peek()
         const size = Buffer.from(top, 'hex').length
@@ -432,7 +432,7 @@ export class Script {
         break
       }
 
-      // ============ 位运算 ============
+      // ============ Bitwise operations ============
       case OpCode.OP_EQUAL: {
         const b = stack.pop()
         const a = stack.pop()
@@ -444,12 +444,12 @@ export class Script {
         const b = stack.pop()
         const a = stack.pop()
         if (a !== b) {
-          throw new Error('OP_EQUALVERIFY 失败')
+          throw new Error('OP_EQUALVERIFY failed')
         }
         break
       }
 
-      // ============ 算术运算 ============
+      // ============ Arithmetic operations ============
       case OpCode.OP_1ADD: {
         const a = StackUtils.decodeNumber(stack.pop())
         stack.push(StackUtils.encodeNumber(a + 1))
@@ -525,7 +525,7 @@ export class Script {
         const b = StackUtils.decodeNumber(stack.pop())
         const a = StackUtils.decodeNumber(stack.pop())
         if (a !== b) {
-          throw new Error('OP_NUMEQUALVERIFY 失败')
+          throw new Error('OP_NUMEQUALVERIFY failed')
         }
         break
       }
@@ -587,7 +587,7 @@ export class Script {
         break
       }
 
-      // ============ 加密操作 ============
+      // ============ Cryptographic operations ============
       case OpCode.OP_RIPEMD160: {
         const data = stack.pop()
         const hash = Hash.ripemd160(data)
@@ -612,7 +612,7 @@ export class Script {
       }
 
       case OpCode.OP_HASH256: {
-        // 双重 SHA256
+        // Double SHA-256
         const data = stack.pop()
         const hash = Hash.doubleSha256(data)
         stack.push(hash)
@@ -624,7 +624,7 @@ export class Script {
         const signature = stack.pop()
 
         if (!context.signatureHash) {
-          throw new Error('OP_CHECKSIG: 缺少签名哈希')
+          throw new Error('OP_CHECKSIG: missing signature hash')
         }
 
         const isValid = Signature.verify(
@@ -641,7 +641,7 @@ export class Script {
         const signature = stack.pop()
 
         if (!context.signatureHash) {
-          throw new Error('OP_CHECKSIGVERIFY: 缺少签名哈希')
+          throw new Error('OP_CHECKSIGVERIFY: missing signature hash')
         }
 
         const isValid = Signature.verify(
@@ -650,14 +650,14 @@ export class Script {
           publicKey
         )
         if (!isValid) {
-          throw new Error('OP_CHECKSIGVERIFY 失败')
+          throw new Error('OP_CHECKSIGVERIFY failed')
         }
         break
       }
 
       case OpCode.OP_CHECKMULTISIG: {
-        // 多重签名验证
-        // 栈顺序（从栈顶到栈底）：n, pubKey_n, ..., pubKey_1, m, sig_m, ..., sig_1, dummy
+        // Multisignature verification
+        // Stack order from top to bottom: n, pubKey_n, ..., pubKey_1, m, sig_m, ..., sig_1, dummy
         const n = StackUtils.decodeNumber(stack.pop())
         const publicKeys: string[] = []
         for (let i = 0; i < n; i++) {
@@ -670,14 +670,14 @@ export class Script {
           signatures.push(stack.pop())
         }
 
-        // 比特币的 CHECKMULTISIG 有一个 bug，会多弹出一个元素
+        // Bitcoin's CHECKMULTISIG bug consumes one extra stack item
         stack.pop() // dummy element
 
         if (!context.signatureHash) {
-          throw new Error('OP_CHECKMULTISIG: 缺少签名哈希')
+          throw new Error('OP_CHECKMULTISIG: missing signature hash')
         }
 
-        // 验证签名（按顺序匹配）
+        // Verify signatures in order
         let sigIndex = 0
         let keyIndex = 0
         while (sigIndex < m && keyIndex < n) {
@@ -698,7 +698,7 @@ export class Script {
       }
 
       case OpCode.OP_CHECKMULTISIGVERIFY: {
-        // 与 OP_CHECKMULTISIG 相同，但验证失败则抛出错误
+        // Same as OP_CHECKMULTISIG, but throws when verification fails
         const n = StackUtils.decodeNumber(stack.pop())
         const publicKeys: string[] = []
         for (let i = 0; i < n; i++) {
@@ -714,7 +714,7 @@ export class Script {
         stack.pop() // dummy element
 
         if (!context.signatureHash) {
-          throw new Error('OP_CHECKMULTISIGVERIFY: 缺少签名哈希')
+          throw new Error('OP_CHECKMULTISIGVERIFY: missing signature hash')
         }
 
         let sigIndex = 0
@@ -732,18 +732,18 @@ export class Script {
         }
 
         if (sigIndex !== m) {
-          throw new Error('OP_CHECKMULTISIGVERIFY 失败')
+          throw new Error('OP_CHECKMULTISIGVERIFY failed')
         }
         break
       }
 
       default:
-        throw new Error(`未实现的操作码: ${getOpCodeName(opcode)}`)
+        throw new Error(`Unimplemented opcode: ${getOpCodeName(opcode)}`)
     }
   }
 
   /**
-   * 合并两个脚本（用于组合 scriptSig 和 scriptPubKey）
+   * Combine scriptSig and scriptPubKey.
    */
   static combine(scriptSig: Script, scriptPubKey: Script): Script {
     const combined = new Script()
@@ -752,7 +752,7 @@ export class Script {
   }
 
   /**
-   * 验证脚本（组合 scriptSig 和 scriptPubKey 后执行）
+   * Verify a script by combining and executing scriptSig and scriptPubKey.
    */
   static verify(
     scriptSig: Script,
@@ -764,21 +764,21 @@ export class Script {
   }
 
   /**
-   * 克隆脚本
+   * Clone the script.
    */
   clone(): Script {
     return new Script([...this.elements])
   }
 
   /**
-   * 脚本长度（字节）
+   * Script length in bytes.
    */
   get length(): number {
     return Buffer.from(this.toHex(), 'hex').length
   }
 
   /**
-   * 是否为空脚本
+   * Check whether the script is empty.
    */
   isEmpty(): boolean {
     return this.elements.length === 0
