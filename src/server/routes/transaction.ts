@@ -8,7 +8,7 @@ const state = ServerState.getInstance()
 
 /**
  * POST /api/transactions
- * 创建新交易
+ * Create a transaction.
  * Body: { fromAddress: string, toAddress: string, amount: number }
  */
 router.post('/transactions', (req: Request, res: Response) => {
@@ -18,14 +18,14 @@ router.post('/transactions', (req: Request, res: Response) => {
     if (!fromAddress || !toAddress || !amount) {
       return res.status(400).json({
         success: false,
-        error: '缺少必要参数: fromAddress, toAddress, amount',
+        error: 'Missing required parameters: fromAddress, toAddress, amount',
       })
     }
     
     if (amount <= 0) {
       return res.status(400).json({
         success: false,
-        error: '转账金额必须大于 0',
+        error: 'Transfer amount must be greater than 0',
       })
     }
     
@@ -33,7 +33,7 @@ router.post('/transactions', (req: Request, res: Response) => {
     if (!wallet) {
       return res.status(404).json({
         success: false,
-        error: '发送方钱包不存在',
+        error: 'Sender wallet not found',
       })
     }
     
@@ -43,11 +43,11 @@ router.post('/transactions', (req: Request, res: Response) => {
     if (balance < amount) {
       return res.status(400).json({
         success: false,
-        error: `余额不足。当前余额: ${balance}, 需要: ${amount}`,
+        error: `Insufficient balance. Available: ${balance}, required: ${amount}`,
       })
     }
     
-    // 创建交易
+    // Create the transaction
     const tx = TransactionBuilder.createSimpleTransfer(
       wallet,
       toAddress,
@@ -55,23 +55,23 @@ router.post('/transactions', (req: Request, res: Response) => {
       utxoSet
     )
     
-    // 验证交易
+    // Validate the transaction
     const isValid = TransactionSigner.verifyTransaction(tx, utxoSet.getAll())
     if (!isValid) {
       return res.status(400).json({
         success: false,
-        error: '交易验证失败',
+        error: 'Transaction validation failed',
       })
     }
     
-    // 添加到待处理交易池
+    // Add the transaction to the pending pool
     state.addPendingTransaction(tx)
     
     res.json({
       success: true,
       data: {
         transaction: tx.toJSON(),
-        message: '交易已创建并加入待处理池',
+        message: 'Transaction created and added to the pending pool',
       },
     })
   } catch (error: any) {
@@ -84,7 +84,7 @@ router.post('/transactions', (req: Request, res: Response) => {
 
 /**
  * GET /api/transactions/pending
- * 获取所有待处理交易
+ * Get all pending transactions.
  */
 router.get('/transactions/pending', (req: Request, res: Response) => {
   try {
@@ -107,7 +107,7 @@ router.get('/transactions/pending', (req: Request, res: Response) => {
 
 /**
  * GET /api/transactions/:txId
- * 获取交易详情
+ * Get transaction details.
  */
 router.get('/transactions/:txId', (req: Request, res: Response) => {
   try {
@@ -117,11 +117,11 @@ router.get('/transactions/:txId', (req: Request, res: Response) => {
     if (!tx) {
       return res.status(404).json({
         success: false,
-        error: '交易不存在',
+        error: 'Transaction not found',
       })
     }
     
-    // 检查交易是否在区块中
+    // Check whether the transaction is in a block
     const chain = state.blockchain.getChain()
     let blockIndex = -1
     let blockHash = ''
@@ -153,7 +153,7 @@ router.get('/transactions/:txId', (req: Request, res: Response) => {
 
 /**
  * DELETE /api/transactions/pending
- * 清空待处理交易池
+ * Clear the pending transaction pool.
  */
 router.delete('/transactions/pending', (req: Request, res: Response) => {
   try {
@@ -163,7 +163,7 @@ router.delete('/transactions/pending', (req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
-        message: `已清空 ${count} 笔待处理交易`,
+        message: `Cleared ${count} pending transactions`,
       },
     })
   } catch (error: any) {
