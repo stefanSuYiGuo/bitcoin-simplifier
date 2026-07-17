@@ -1,6 +1,6 @@
 /**
- * 脚本构建器
- * 提供便捷方法构建常见脚本类型
+ * Script builder.
+ * Provides convenient methods for constructing common script types.
  */
 
 import {Script} from './Script'
@@ -8,14 +8,14 @@ import {OpCode} from './OpCodes'
 import {Hash} from '../crypto'
 
 /**
- * 脚本构建器
+ * Script builder.
  */
 export class ScriptBuilder {
   /**
-   * 构建 P2PKH 锁定脚本 (Pay-to-Public-Key-Hash)
+   * Build a P2PKH locking script (Pay-to-Public-Key-Hash).
    * scriptPubKey: OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
    *
-   * @param pubKeyHash 公钥哈希（20 字节，十六进制）
+   * @param pubKeyHash 20-byte public key hash in hexadecimal form.
    */
   static buildP2PKHLockingScript(pubKeyHash: string): Script {
     return new Script()
@@ -27,11 +27,11 @@ export class ScriptBuilder {
   }
 
   /**
-   * 构建 P2PKH 解锁脚本
+   * Build a P2PKH unlocking script.
    * scriptSig: <signature> <publicKey>
    *
-   * @param signature 签名（DER 格式，十六进制）
-   * @param publicKey 公钥（十六进制）
+   * @param signature DER-encoded signature in hexadecimal form.
+   * @param publicKey Public key in hexadecimal form.
    */
   static buildP2PKHUnlockingScript(
     signature: string,
@@ -41,9 +41,9 @@ export class ScriptBuilder {
   }
 
   /**
-   * 从公钥生成 P2PKH 锁定脚本
+   * Build a P2PKH locking script from a public key.
    *
-   * @param publicKey 公钥（十六进制）
+   * @param publicKey Public key in hexadecimal form.
    */
   static buildP2PKHFromPublicKey(publicKey: string): Script {
     const pubKeyHash = ScriptBuilder.hash160(publicKey)
@@ -51,20 +51,20 @@ export class ScriptBuilder {
   }
 
   /**
-   * 从地址生成 P2PKH 锁定脚本
-   * 注意：需要先将地址解码为公钥哈希
+   * Build a P2PKH locking script from an address.
+   * The address must first be decoded into a public key hash.
    *
-   * @param address Base58 地址
+   * @param address Base58 address.
    */
   static buildP2PKHFromAddress(pubKeyHash: string): Script {
     return ScriptBuilder.buildP2PKHLockingScript(pubKeyHash)
   }
 
   /**
-   * 构建 P2SH 锁定脚本 (Pay-to-Script-Hash)
+   * Build a P2SH locking script (Pay-to-Script-Hash).
    * scriptPubKey: OP_HASH160 <scriptHash> OP_EQUAL
    *
-   * @param scriptHash 赎回脚本哈希（20 字节，十六进制）
+   * @param scriptHash 20-byte redeem script hash in hexadecimal form.
    */
   static buildP2SHLockingScript(scriptHash: string): Script {
     return new Script()
@@ -74,11 +74,11 @@ export class ScriptBuilder {
   }
 
   /**
-   * 构建 P2SH 解锁脚本
+   * Build a P2SH unlocking script.
    * scriptSig: <data...> <redeemScript>
    *
-   * @param data 解锁数据（签名等）
-   * @param redeemScript 赎回脚本（序列化后的十六进制）
+   * @param data Unlocking data such as signatures.
+   * @param redeemScript Serialized redeem script in hexadecimal form.
    */
   static buildP2SHUnlockingScript(
     data: string[],
@@ -93,9 +93,9 @@ export class ScriptBuilder {
   }
 
   /**
-   * 从赎回脚本生成 P2SH 锁定脚本
+   * Build a P2SH locking script from a redeem script.
    *
-   * @param redeemScript 赎回脚本
+   * @param redeemScript Redeem script.
    */
   static buildP2SHFromRedeemScript(redeemScript: Script): Script {
     const scriptHash = ScriptBuilder.hash160(redeemScript.toHex())
@@ -103,55 +103,55 @@ export class ScriptBuilder {
   }
 
   /**
-   * 构建多重签名赎回脚本 (m-of-n)
+   * Build an m-of-n multisignature redeem script.
    * script: <m> <pubKey1> <pubKey2> ... <pubKeyN> <n> OP_CHECKMULTISIG
    *
-   * @param m 所需签名数
-   * @param publicKeys 公钥列表
+   * @param m Number of required signatures.
+   * @param publicKeys List of public keys.
    */
   static buildMultiSigScript(m: number, publicKeys: string[]): Script {
     const n = publicKeys.length
 
     if (m < 1 || m > n) {
-      throw new Error(`无效的多签参数: ${m}-of-${n}`)
+      throw new Error(`Invalid multisignature parameters: ${m}-of-${n}`)
     }
     if (n > 16) {
-      throw new Error('公钥数量不能超过 16')
+      throw new Error('The number of public keys cannot exceed 16')
     }
 
     const script = new Script()
 
-    // 添加 m
+    // Add m
     script.addOpCode(ScriptBuilder.numberToOpCode(m))
 
-    // 添加所有公钥
+    // Add all public keys
     for (const pubKey of publicKeys) {
       script.addData(pubKey)
     }
 
-    // 添加 n
+    // Add n
     script.addOpCode(ScriptBuilder.numberToOpCode(n))
 
-    // 添加 OP_CHECKMULTISIG
+    // Add OP_CHECKMULTISIG
     script.addOpCode(OpCode.OP_CHECKMULTISIG)
 
     return script
   }
 
   /**
-   * 构建多重签名解锁脚本
+   * Build a multisignature unlocking script.
    * scriptSig: OP_0 <sig1> <sig2> ... <sigM>
-   * 注意：OP_0 是因为 OP_CHECKMULTISIG 的一个 bug
+   * OP_0 is required because of the OP_CHECKMULTISIG bug.
    *
-   * @param signatures 签名列表
+   * @param signatures List of signatures.
    */
   static buildMultiSigUnlockingScript(signatures: string[]): Script {
     const script = new Script()
 
-    // CHECKMULTISIG bug: 需要一个额外的虚拟元素
+    // The CHECKMULTISIG bug requires an extra dummy element
     script.addOpCode(OpCode.OP_0)
 
-    // 添加所有签名
+    // Add all signatures
     for (const sig of signatures) {
       script.addData(sig)
     }
@@ -160,10 +160,10 @@ export class ScriptBuilder {
   }
 
   /**
-   * 构建 P2SH 多签锁定脚本
+   * Build a P2SH multisignature locking script.
    *
-   * @param m 所需签名数
-   * @param publicKeys 公钥列表
+   * @param m Number of required signatures.
+   * @param publicKeys List of public keys.
    */
   static buildP2SHMultiSig(
     m: number,
@@ -175,10 +175,10 @@ export class ScriptBuilder {
   }
 
   /**
-   * 构建 P2SH 多签解锁脚本
+   * Build a P2SH multisignature unlocking script.
    *
-   * @param signatures 签名列表
-   * @param redeemScript 赎回脚本
+   * @param signatures List of signatures.
+   * @param redeemScript Redeem script.
    */
   static buildP2SHMultiSigUnlockingScript(
     signatures: string[],
@@ -186,57 +186,57 @@ export class ScriptBuilder {
   ): Script {
     const script = new Script()
 
-    // CHECKMULTISIG bug 虚拟元素
+    // Dummy element required by the CHECKMULTISIG bug
     script.addOpCode(OpCode.OP_0)
 
-    // 添加签名
+    // Add signatures
     for (const sig of signatures) {
       script.addData(sig)
     }
 
-    // 添加赎回脚本
+    // Add the redeem script
     script.addData(redeemScript.toHex())
 
     return script
   }
 
   /**
-   * 构建 P2PK 锁定脚本 (Pay-to-Public-Key)
+   * Build a P2PK locking script (Pay-to-Public-Key).
    * scriptPubKey: <publicKey> OP_CHECKSIG
-   * 较旧的脚本类型，现在不常用
+   * This older script type is now uncommon.
    *
-   * @param publicKey 公钥（十六进制）
+   * @param publicKey Public key in hexadecimal form.
    */
   static buildP2PKLockingScript(publicKey: string): Script {
     return new Script().addData(publicKey).addOpCode(OpCode.OP_CHECKSIG)
   }
 
   /**
-   * 构建 P2PK 解锁脚本
+   * Build a P2PK unlocking script.
    * scriptSig: <signature>
    *
-   * @param signature 签名（十六进制）
+   * @param signature Signature in hexadecimal form.
    */
   static buildP2PKUnlockingScript(signature: string): Script {
     return new Script().addData(signature)
   }
 
   /**
-   * 构建 OP_RETURN 脚本（存储数据，使输出不可花费）
+   * Build an OP_RETURN script that stores data and makes the output unspendable.
    * scriptPubKey: OP_RETURN <data>
    *
-   * @param data 要存储的数据（十六进制）
+   * @param data Data to store in hexadecimal form.
    */
   static buildOpReturnScript(data: string): Script {
     return new Script().addOpCode(OpCode.OP_RETURN).addData(data)
   }
 
   /**
-   * 构建时间锁脚本 (CLTV)
+   * Build a time-locked CLTV script.
    * scriptPubKey: <locktime> OP_CHECKLOCKTIMEVERIFY OP_DROP <normal script>
    *
-   * @param lockTime 锁定时间（区块高度或 Unix 时间戳）
-   * @param innerScript 内部脚本（锁定时间后执行）
+   * @param lockTime Lock time as a block height or Unix timestamp.
+   * @param innerScript Inner script executed after the lock time.
    */
   static buildCLTVScript(lockTime: number, innerScript: Script): Script {
     const script = new Script()
@@ -244,7 +244,7 @@ export class ScriptBuilder {
     script.addOpCode(OpCode.OP_CHECKLOCKTIMEVERIFY)
     script.addOpCode(OpCode.OP_DROP)
 
-    // 合并内部脚本
+    // Append the inner script
     for (const element of innerScript.getElements()) {
       if (element.type === 'opcode') {
         script.addOpCode(element.code)
@@ -256,10 +256,10 @@ export class ScriptBuilder {
     return script
   }
 
-  // ============ 辅助方法 ============
+  // ============ Helper methods ============
 
   /**
-   * 计算 HASH160 (SHA256 + RIPEMD160)
+   * Calculate HASH160 (SHA-256 + RIPEMD-160).
    */
   static hash160(data: string): string {
     const sha256 = Hash.sha256(data)
@@ -267,18 +267,18 @@ export class ScriptBuilder {
   }
 
   /**
-   * 数值转操作码（1-16）
+   * Convert a number from 1 through 16 to an opcode.
    */
   static numberToOpCode(num: number): OpCode {
     if (num === 0) return OpCode.OP_0
     if (num >= 1 && num <= 16) {
       return (OpCode.OP_1 + num - 1) as OpCode
     }
-    throw new Error(`数值超出操作码范围: ${num}`)
+    throw new Error(`Value is outside the opcode range: ${num}`)
   }
 
   /**
-   * 编码数值为脚本数据
+   * Encode a number as script data.
    */
   static encodeNumber(num: number): string {
     if (num === 0) return ''
@@ -302,7 +302,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 判断是否是 P2PKH 脚本
+   * Check whether a script is P2PKH.
    */
   static isP2PKH(script: Script): boolean {
     const elements = script.getElements()
@@ -321,7 +321,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 判断是否是 P2SH 脚本
+   * Check whether a script is P2SH.
    */
   static isP2SH(script: Script): boolean {
     const elements = script.getElements()
@@ -336,7 +336,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 判断是否是 P2PK 脚本
+   * Check whether a script is P2PK.
    */
   static isP2PK(script: Script): boolean {
     const elements = script.getElements()
@@ -349,7 +349,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 判断是否是多签脚本
+   * Check whether a script is multisignature.
    */
   static isMultiSig(script: Script): boolean {
     const elements = script.getElements()
@@ -360,7 +360,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 判断是否是 OP_RETURN 脚本
+   * Check whether a script is OP_RETURN.
    */
   static isOpReturn(script: Script): boolean {
     const elements = script.getElements()
@@ -372,7 +372,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 从 P2PKH 锁定脚本提取公钥哈希
+   * Extract the public key hash from a P2PKH locking script.
    */
   static extractP2PKHPubKeyHash(script: Script): string | null {
     if (!ScriptBuilder.isP2PKH(script)) return null
@@ -385,7 +385,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 从 P2SH 锁定脚本提取脚本哈希
+   * Extract the script hash from a P2SH locking script.
    */
   static extractP2SHScriptHash(script: Script): string | null {
     if (!ScriptBuilder.isP2SH(script)) return null
@@ -398,7 +398,7 @@ export class ScriptBuilder {
   }
 
   /**
-   * 获取脚本类型描述
+   * Get the script type description.
    */
   static getScriptType(script: Script): string {
     if (ScriptBuilder.isP2PKH(script)) return 'P2PKH'
