@@ -1,106 +1,106 @@
-# 实现一个简单的比特币：Part 4 - 脚本系统
+# Building a Simple Bitcoin: Part 4 - The Script System
 
-在前几篇文章中，我们实现了比特币的核心组件：密码学基础、UTXO 模型、交易系统、区块链和挖矿机制。现在，我们将深入探索比特币最强大但常被忽视的特性之一——**脚本系统**。
+In the previous articles, we implemented Bitcoin's core components: cryptographic foundations, the UTXO model, the transaction system, the blockchain, and the mining mechanism. We will now explore one of Bitcoin's most powerful but often overlooked features: the **script system**.
 
-## 为什么需要脚本系统？
+## Why Is a Script System Necessary?
 
-在我们之前的实现中，交易验证是"硬编码"的：验证签名是否正确，公钥是否匹配。但真实的比特币远比这灵活：
-
-```
-传统验证: 签名 + 公钥 → 验证通过/失败
-
-脚本验证: 解锁脚本 + 锁定脚本 → 执行 → 栈顶为 true 则通过
-```
-
-脚本系统让比特币支持：
-
-1. **P2PKH (Pay-to-Public-Key-Hash)** - 最常见的交易类型
-2. **P2SH (Pay-to-Script-Hash)** - 支持复杂脚本的交易
-3. **多重签名** - 需要多个人签名才能花费
-4. **时间锁** - 在特定时间后才能花费
-5. **哈希锁** - 提供特定原像才能花费（原子交换的基础）
-
-## 理解比特币脚本
-
-### 基于栈的执行模型
-
-比特币脚本是一种简单的、基于栈的编程语言。它不是图灵完备的——没有循环，只能顺序执行。这种设计是故意的，为了保证脚本一定会终止，避免恶意代码。
+In our previous implementation, transaction validation was "hard-coded": verify that the signature is correct and that the public key matches. Real Bitcoin is far more flexible:
 
 ```
-栈操作示意：
+Traditional validation: signature + public key → pass/fail
 
-          OP_DUP (复制栈顶)
+Script validation: unlocking script + locking script → execute → pass if the top stack value is true
+```
+
+The script system allows Bitcoin to support:
+
+1. **P2PKH (Pay-to-Public-Key-Hash)** - The most common transaction type
+2. **P2SH (Pay-to-Script-Hash)** - Transactions that support complex scripts
+3. **Multisignature** - Requires signatures from multiple participants to spend
+4. **Time locks** - Allows spending only after a specified time
+5. **Hash locks** - Requires a specific preimage to spend, forming the basis of atomic swaps
+
+## Understanding Bitcoin Script
+
+### Stack-Based Execution Model
+
+Bitcoin Script is a simple, stack-based programming language. It is not Turing-complete: it has no loops and executes sequentially. This is an intentional design choice that guarantees script termination and prevents malicious code from running indefinitely.
+
+```
+Stack operation examples:
+
+          OP_DUP (duplicate the top item)
 [A]  →  [A, A]
 
-          OP_ADD (弹出两个，压入和)
+          OP_ADD (pop two items and push their sum)
 [3, 5]  →  [8]
 
-          OP_EQUALVERIFY (弹出两个，相等则继续，否则失败)
-[A, A]  →  []  (继续执行)
+          OP_EQUALVERIFY (pop two items; continue if equal, otherwise fail)
+[A, A]  →  []  (continue execution)
 [A, B]  →  Script Failed!
 ```
 
-### 锁定脚本与解锁脚本
+### Locking and Unlocking Scripts
 
-每个交易输出都有一个**锁定脚本 (scriptPubKey)**，定义花费条件。
-要花费这个输出，输入必须提供**解锁脚本 (scriptSig)**。
+Every transaction output has a **locking script (scriptPubKey)** that defines its spending conditions.
+To spend the output, an input must provide an **unlocking script (scriptSig)**.
 
-验证时，两个脚本合并执行：
+During validation, the two scripts are executed together:
 
 ```
-scriptSig + scriptPubKey → 执行 → 栈顶为 true 则验证通过
+scriptSig + scriptPubKey → execute → validation succeeds if the top stack value is true
 ```
 
-## 操作码设计
+## Opcode Design
 
-让我们实现核心操作码：
+Let us implement the core opcodes:
 
 ```typescript
 // src/script/OpCodes.ts
 export enum OpCode {
-  // 常量操作码
-  OP_0 = 0x00,              // 压入空字节
-  OP_1 = 0x51,              // 压入数字 1
-  OP_2 = 0x52,              // 压入数字 2
-  // ... OP_3 到 OP_16
+  // Constant opcodes
+  OP_0 = 0x00,              // Push an empty byte array
+  OP_1 = 0x51,              // Push the number 1
+  OP_2 = 0x52,              // Push the number 2
+  // ... OP_3 through OP_16
   
-  // 栈操作
-  OP_DUP = 0x76,            // 复制栈顶
-  OP_DROP = 0x75,           // 删除栈顶
-  OP_SWAP = 0x7c,           // 交换栈顶两个元素
+  // Stack operations
+  OP_DUP = 0x76,            // Duplicate the top item
+  OP_DROP = 0x75,           // Remove the top item
+  OP_SWAP = 0x7c,           // Swap the top two items
   
-  // 加密操作
+  // Cryptographic operations
   OP_HASH160 = 0xa9,        // SHA256 + RIPEMD160
-  OP_CHECKSIG = 0xac,       // 验证签名
-  OP_CHECKMULTISIG = 0xae,  // 多重签名验证
+  OP_CHECKSIG = 0xac,       // Verify a signature
+  OP_CHECKMULTISIG = 0xae,  // Verify multiple signatures
   
-  // 比较操作
-  OP_EQUAL = 0x87,          // 相等检查
-  OP_EQUALVERIFY = 0x88,    // 相等检查 + 验证
-  OP_VERIFY = 0x69,         // 栈顶为假则失败
+  // Comparison operations
+  OP_EQUAL = 0x87,          // Check equality
+  OP_EQUALVERIFY = 0x88,    // Check equality and verify
+  OP_VERIFY = 0x69,         // Fail if the top stack value is false
 }
 ```
 
-## 执行栈实现
+## Execution Stack Implementation
 
-栈是脚本执行的核心数据结构：
+The stack is the core data structure used during script execution:
 
 ```typescript
 // src/script/Stack.ts
 export class Stack {
-  private items: string[] = []  // 十六进制字符串
-  private maxSize: number = 1000  // 比特币限制
+  private items: string[] = []  // Hexadecimal strings
+  private maxSize: number = 1000  // Bitcoin limit
 
   push(item: string): void {
     if (this.items.length >= this.maxSize) {
-      throw new Error('栈溢出')
+      throw new Error('Stack overflow')
     }
     this.items.push(item)
   }
 
   pop(): string {
     if (this.items.length === 0) {
-      throw new Error('栈下溢')
+      throw new Error('Stack underflow')
     }
     return this.items.pop()!
   }
@@ -118,13 +118,13 @@ export class Stack {
 }
 ```
 
-### 数值编码
+### Number Encoding
 
-比特币脚本使用特殊的数值编码方式：
+Bitcoin Script uses a specialized number encoding:
 
 ```typescript
 export const StackUtils = {
-  // 数值编码为字节（小端序，有符号）
+  // Encode a number as signed little-endian bytes
   encodeNumber(num: number): string {
     if (num === 0) return ''
     
@@ -137,7 +137,7 @@ export const StackUtils = {
       absNum >>= 8
     }
     
-    // 处理符号位
+    // Handle the sign bit
     if (bytes[bytes.length - 1] & 0x80) {
       bytes.push(negative ? 0x80 : 0x00)
     } else if (negative) {
@@ -147,15 +147,15 @@ export const StackUtils = {
     return Buffer.from(bytes).toString('hex')
   },
 
-  // 判断是否为"真"
+  // Determine whether the value is true
   isTrue(element: string): boolean {
     if (element === '') return false
-    // 全零或负零都是假
+    // All-zero values and negative zero are false
     const bytes = Buffer.from(element, 'hex')
     for (let i = 0; i < bytes.length; i++) {
       if (bytes[i] !== 0) {
         if (i === bytes.length - 1 && bytes[i] === 0x80) {
-          return false  // 负零
+          return false  // Negative zero
         }
         return true
       }
@@ -165,9 +165,9 @@ export const StackUtils = {
 }
 ```
 
-## 脚本执行引擎
+## Script Execution Engine
 
-核心执行引擎逐个处理操作码：
+The core execution engine processes opcodes one at a time:
 
 ```typescript
 // src/script/Script.ts
@@ -180,24 +180,24 @@ export class Script {
     let opCount = 0
 
     for (const element of this.elements) {
-      // 数据直接压栈
+      // Push data directly onto the stack
       if (element.type === 'data') {
         stack.push(element.data)
         continue
       }
 
-      // 执行操作码
+      // Execute an opcode
       const opcode = element.code
       opCount++
       
-      if (opCount > 201) {  // 比特币限制
-        throw new Error('超过最大操作数')
+      if (opCount > 201) {  // Bitcoin limit
+        throw new Error('Maximum operation count exceeded')
       }
 
       this.executeOpCode(opcode, stack, altStack, context)
     }
 
-    // 栈非空且栈顶为真 = 成功
+    // Success requires a nonempty stack with a true top value
     return {
       success: !stack.isEmpty() && StackUtils.isTrue(stack.peek()),
       stack: stack.getItems(),
@@ -207,7 +207,7 @@ export class Script {
 }
 ```
 
-### 关键操作码实现
+### Implementing Key Opcodes
 
 ```typescript
 private executeOpCode(opcode: OpCode, stack: Stack, ...): void {
@@ -227,7 +227,7 @@ private executeOpCode(opcode: OpCode, stack: Stack, ...): void {
       const b = stack.pop()
       const a = stack.pop()
       if (a !== b) {
-        throw new Error('OP_EQUALVERIFY 失败')
+        throw new Error('OP_EQUALVERIFY failed')
       }
       break
     }
@@ -245,64 +245,64 @@ private executeOpCode(opcode: OpCode, stack: Stack, ...): void {
       break
     }
     
-    // ... 其他操作码
+    // ... Other opcodes
   }
 }
 ```
 
-## P2PKH: 最常见的交易类型
+## P2PKH: The Most Common Transaction Type
 
-P2PKH (Pay-to-Public-Key-Hash) 是比特币最常见的交易类型。让我们详细分析它的工作原理。
+P2PKH (Pay-to-Public-Key-Hash) is Bitcoin's most common transaction type. Let us examine how it works in detail.
 
-### 锁定脚本
+### Locking Script
 
 ```
 OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
 ```
 
-这个脚本说："要花费这笔钱，你需要提供一个公钥，它的哈希等于这个值，并且用对应私钥签名。"
+This script states: "To spend these funds, you must provide a public key whose hash equals this value and a signature created with the corresponding private key."
 
-### 解锁脚本
+### Unlocking Script
 
 ```
 <signature> <publicKey>
 ```
 
-### 执行过程
+### Execution Process
 
 ```
-初始栈: []
+Initial stack: []
 
-1. 压入 signature
-   栈: [sig]
+1. Push signature
+   Stack: [sig]
 
-2. 压入 publicKey
-   栈: [sig, pubKey]
+2. Push publicKey
+   Stack: [sig, pubKey]
 
-3. OP_DUP - 复制栈顶
-   栈: [sig, pubKey, pubKey]
+3. OP_DUP - Duplicate the top item
+   Stack: [sig, pubKey, pubKey]
 
-4. OP_HASH160 - 哈希栈顶
-   栈: [sig, pubKey, hash(pubKey)]
+4. OP_HASH160 - Hash the top item
+   Stack: [sig, pubKey, hash(pubKey)]
 
-5. 压入 pubKeyHash（来自锁定脚本）
-   栈: [sig, pubKey, hash(pubKey), pubKeyHash]
+5. Push pubKeyHash from the locking script
+   Stack: [sig, pubKey, hash(pubKey), pubKeyHash]
 
-6. OP_EQUALVERIFY - 比较并验证
-   栈: [sig, pubKey]  (如果相等，继续；否则失败)
+6. OP_EQUALVERIFY - Compare and verify
+   Stack: [sig, pubKey]  (continue if equal; otherwise fail)
 
-7. OP_CHECKSIG - 验证签名
-   栈: [true/false]
+7. OP_CHECKSIG - Verify the signature
+   Stack: [true/false]
 
-最终: 栈顶为 true = 验证成功！
+Final result: Validation succeeds when the top stack value is true
 ```
 
-### 代码实现
+### Implementation
 
 ```typescript
 // src/script/ScriptBuilder.ts
 export class ScriptBuilder {
-  // 构建 P2PKH 锁定脚本
+  // Build a P2PKH locking script
   static buildP2PKHLockingScript(pubKeyHash: string): Script {
     return new Script()
       .addOpCode(OpCode.OP_DUP)
@@ -312,7 +312,7 @@ export class ScriptBuilder {
       .addOpCode(OpCode.OP_CHECKSIG)
   }
 
-  // 构建 P2PKH 解锁脚本
+  // Build a P2PKH unlocking script
   static buildP2PKHUnlockingScript(
     signature: string,
     publicKey: string
@@ -324,30 +324,30 @@ export class ScriptBuilder {
 }
 ```
 
-## 多重签名: 安全性的飞跃
+## Multisignature: A Major Security Improvement
 
-多重签名 (MultiSig) 允许 m-of-n 签名方案：n 个公钥中需要 m 个签名才能花费。
+Multisignature (MultiSig) supports an m-of-n signature scheme: m signatures corresponding to n public keys are required to spend the funds.
 
-### 2-of-3 多签示例
+### 2-of-3 Multisignature Example
 
-常见于公司资金管理：CEO、CFO、COO 三人中任意两人签名才能花费。
+This is commonly used for corporate treasury management, where any two of the CEO, CFO, and COO must sign before funds can be spent.
 
-**赎回脚本 (Redeem Script)**:
+**Redeem Script**:
 ```
 OP_2 <pubKey1> <pubKey2> <pubKey3> OP_3 OP_CHECKMULTISIG
 ```
 
-**解锁脚本**:
+**Unlocking script**:
 ```
 OP_0 <sig1> <sig2>
 ```
 
-> 注意：`OP_0` 是因为 `OP_CHECKMULTISIG` 的一个著名 bug，它会多弹出一个元素。为了向后兼容，这个 bug 被保留了。
+> Note: `OP_0` is required because of a well-known `OP_CHECKMULTISIG` bug that pops one extra element. The bug has been preserved for backward compatibility.
 
-### 代码实现
+### Implementation
 
 ```typescript
-// 构建多签脚本
+// Build a multisignature script
 static buildMultiSigScript(m: number, publicKeys: string[]): Script {
   const n = publicKeys.length
   const script = new Script()
@@ -355,7 +355,7 @@ static buildMultiSigScript(m: number, publicKeys: string[]): Script {
   // m
   script.addOpCode(this.numberToOpCode(m))
   
-  // 所有公钥
+  // All public keys
   for (const pubKey of publicKeys) {
     script.addData(pubKey)
   }
@@ -369,11 +369,11 @@ static buildMultiSigScript(m: number, publicKeys: string[]): Script {
   return script
 }
 
-// 多签解锁脚本
+// Multisignature unlocking script
 static buildMultiSigUnlockingScript(signatures: string[]): Script {
   const script = new Script()
   
-  // bug workaround: 需要一个虚拟元素
+  // Bug workaround: a dummy element is required
   script.addOpCode(OpCode.OP_0)
   
   for (const sig of signatures) {
@@ -384,28 +384,28 @@ static buildMultiSigUnlockingScript(signatures: string[]): Script {
 }
 ```
 
-### OP_CHECKMULTISIG 实现
+### OP_CHECKMULTISIG Implementation
 
 ```typescript
 case OpCode.OP_CHECKMULTISIG: {
-  // 获取 n 和公钥
+  // Get n and the public keys
   const n = StackUtils.decodeNumber(stack.pop())
   const publicKeys: string[] = []
   for (let i = 0; i < n; i++) {
     publicKeys.push(stack.pop())
   }
 
-  // 获取 m 和签名
+  // Get m and the signatures
   const m = StackUtils.decodeNumber(stack.pop())
   const signatures: string[] = []
   for (let i = 0; i < m; i++) {
     signatures.push(stack.pop())
   }
 
-  // CHECKMULTISIG bug: 多弹出一个元素
+  // CHECKMULTISIG bug: pop one extra element
   stack.pop()
 
-  // 按顺序匹配签名和公钥
+  // Match signatures and public keys in order
   let sigIndex = 0
   let keyIndex = 0
   while (sigIndex < m && keyIndex < n) {
@@ -426,37 +426,37 @@ case OpCode.OP_CHECKMULTISIG: {
 }
 ```
 
-## P2SH: 脚本的脚本
+## P2SH: A Script for Scripts
 
-P2SH (Pay-to-Script-Hash) 是一个优雅的解决方案：不是在输出中放置完整的锁定脚本，而是放置脚本的哈希。
+P2SH (Pay-to-Script-Hash) is an elegant solution: instead of placing the complete locking script in an output, it places the script hash there.
 
-### 为什么需要 P2SH？
+### Why Is P2SH Necessary?
 
-1. **更短的地址** - 无论多复杂的脚本，地址长度固定
-2. **隐私** - 在花费前不知道锁定条件
-3. **费用转移** - 复杂脚本的费用由花费者承担
+1. **Shorter addresses** - Address length remains fixed regardless of script complexity
+2. **Privacy** - The locking conditions remain unknown until the output is spent
+3. **Fee transfer** - The spender bears the cost of the complex script
 
-### P2SH 锁定脚本
+### P2SH Locking Script
 
 ```
 OP_HASH160 <scriptHash> OP_EQUAL
 ```
 
-### P2SH 解锁脚本
+### P2SH Unlocking Script
 
 ```
 <data...> <redeemScript>
 ```
 
-### 验证过程
+### Validation Process
 
-1. 首先验证 `hash(redeemScript) == scriptHash`
-2. 然后执行 `<data...> + redeemScript`
+1. First verify `hash(redeemScript) == scriptHash`
+2. Then execute `<data...> + redeemScript`
 
-### 代码实现
+### Implementation
 
 ```typescript
-// 构建 P2SH 锁定脚本
+// Build a P2SH locking script
 static buildP2SHLockingScript(scriptHash: string): Script {
   return new Script()
     .addOpCode(OpCode.OP_HASH160)
@@ -464,13 +464,13 @@ static buildP2SHLockingScript(scriptHash: string): Script {
     .addOpCode(OpCode.OP_EQUAL)
 }
 
-// 从赎回脚本生成 P2SH
+// Generate P2SH from a redeem script
 static buildP2SHFromRedeemScript(redeemScript: Script): Script {
   const scriptHash = ScriptBuilder.hash160(redeemScript.toHex())
   return ScriptBuilder.buildP2SHLockingScript(scriptHash)
 }
 
-// P2SH 多签（实际应用中最常见）
+// P2SH multisignature, the most common practical use
 static buildP2SHMultiSig(m: number, publicKeys: string[]): {
   lockingScript: Script
   redeemScript: Script
@@ -481,33 +481,33 @@ static buildP2SHMultiSig(m: number, publicKeys: string[]): {
 }
 ```
 
-## 更新交易结构
+## Updating the Transaction Structure
 
-现在我们需要更新 `TxInput` 和 `TxOutput` 以支持脚本：
+We now need to update `TxInput` and `TxOutput` to support scripts:
 
 ```typescript
 // TxInput.ts
 export class TxInput {
   private _scriptSig?: Script
   
-  // 向后兼容的签名设置
+  // Backward-compatible signature setter
   setSignature(signature: string, publicKey: string): void {
     this.signature = signature
     this.publicKey = publicKey
-    // 同时更新 scriptSig
+    // Update scriptSig at the same time
     this._scriptSig = ScriptBuilder.buildP2PKHUnlockingScript(
       signature, publicKey
     )
   }
   
-  // 直接设置脚本
+  // Set the script directly
   setScriptSig(scriptSig: Script): void {
     this._scriptSig = scriptSig
   }
   
   getScriptSig(): Script {
     if (this._scriptSig) return this._scriptSig
-    // 从传统字段构建
+    // Build from the legacy fields
     return ScriptBuilder.buildP2PKHUnlockingScript(
       this.signature, this.publicKey
     )
@@ -518,7 +518,7 @@ export class TxInput {
 export class TxOutput {
   private _scriptPubKey?: Script
   
-  // 带脚本的工厂方法
+  // Factory method for an output with a script
   static createWithScript(amount: number, scriptPubKey: Script): TxOutput {
     const output = new TxOutput(amount, 'script:...')
     output._scriptPubKey = scriptPubKey
@@ -527,7 +527,7 @@ export class TxOutput {
   
   getScriptPubKey(): Script {
     if (this._scriptPubKey) return this._scriptPubKey
-    // 从地址生成 P2PKH 脚本
+    // Generate a P2PKH script from the address
     return ScriptBuilder.buildP2PKHLockingScript(this.address)
   }
   
@@ -537,7 +537,7 @@ export class TxOutput {
 }
 ```
 
-## 脚本类型识别
+## Script Type Recognition
 
 ```typescript
 static getScriptType(script: Script): string {
@@ -562,26 +562,26 @@ static isP2PKH(script: Script): boolean {
 }
 ```
 
-## 完整验证示例
+## Complete Validation Example
 
-让我们看一个完整的 P2PKH 验证：
+Consider a complete P2PKH validation:
 
 ```typescript
-// 生成密钥对
+// Generate a key pair
 const { privateKey, publicKey } = Signature.generateKeyPair()
 const pubKeyHash = ScriptBuilder.hash160(publicKey)
 
-// 构建锁定脚本（发送方创建）
+// Build the locking script, created by the sender
 const scriptPubKey = ScriptBuilder.buildP2PKHLockingScript(pubKeyHash)
 
-// 模拟交易签名
+// Simulate transaction signing
 const txHash = Hash.sha256('transaction data')
 const signature = Signature.sign(txHash, privateKey)
 
-// 构建解锁脚本（接收方花费时创建）
+// Build the unlocking script, created when the recipient spends the output
 const scriptSig = ScriptBuilder.buildP2PKHUnlockingScript(signature, publicKey)
 
-// 验证！
+// Verify
 const result = Script.verify(scriptSig, scriptPubKey, {
   signatureHash: txHash
 })
@@ -589,9 +589,9 @@ const result = Script.verify(scriptSig, scriptPubKey, {
 console.log(result.success)  // true
 ```
 
-## OP_RETURN: 数据存储
+## OP_RETURN: Data Storage
 
-`OP_RETURN` 用于在区块链上存储任意数据，同时标记输出不可花费：
+`OP_RETURN` stores arbitrary data on the blockchain while marking the output as unspendable:
 
 ```typescript
 static buildOpReturnScript(data: string): Script {
@@ -601,21 +601,21 @@ static buildOpReturnScript(data: string): Script {
 }
 ```
 
-应用场景：
-- 证明文件存在（时间戳服务）
-- 存储元数据
-- 彩色币（Colored Coins）
-- 协议层数据（如 Omni Layer）
+Use cases:
+- Proving that a file existed through a timestamping service
+- Storing metadata
+- Colored Coins
+- Protocol-layer data such as Omni Layer data
 
-## 安全考虑
+## Security Considerations
 
-比特币脚本有严格的限制：
+Bitcoin Script has strict limits:
 
-1. **最大脚本大小**: 10,000 字节
-2. **最大操作数**: 201
-3. **栈深度限制**: 1,000 元素
-4. **没有循环**: 保证脚本终止
-5. **有限操作码集**: 减少攻击面
+1. **Maximum script size**: 10,000 bytes
+2. **Maximum operation count**: 201
+3. **Stack depth limit**: 1,000 elements
+4. **No loops**: Guarantees script termination
+5. **Limited opcode set**: Reduces the attack surface
 
 ```typescript
 execute(context: ScriptContext): ScriptResult {
@@ -624,18 +624,18 @@ execute(context: ScriptContext): ScriptResult {
   for (const element of this.elements) {
     opCount++
     if (opCount > maxOps) {
-      throw new Error('超过最大操作数限制')
+      throw new Error('Maximum operation count exceeded')
     }
     // ...
   }
 }
 ```
 
-## 测试
+## Tests
 
 ```typescript
-describe('P2PKH 完整验证', () => {
-  test('签名验证', () => {
+describe('Complete P2PKH validation', () => {
+  test('signature verification', () => {
     const { privateKey, publicKey } = Signature.generateKeyPair()
     const pubKeyHash = ScriptBuilder.hash160(publicKey)
     
@@ -652,8 +652,8 @@ describe('P2PKH 完整验证', () => {
   })
 })
 
-describe('多重签名验证', () => {
-  test('2-of-3 多签', () => {
+describe('Multisignature validation', () => {
+  test('2-of-3 multisignature', () => {
     const keys = [
       Signature.generateKeyPair(),
       Signature.generateKeyPair(),
@@ -679,24 +679,24 @@ describe('多重签名验证', () => {
 })
 ```
 
-## 总结
+## Summary
 
-通过实现脚本系统，我们的比特币实现获得了：
+By implementing the script system, our Bitcoin implementation gains:
 
-1. **可编程性** - 交易条件可以用脚本定义
-2. **灵活性** - 支持多种交易类型
-3. **安全性** - 多签、时间锁等高级功能
-4. **兼容性** - 向后兼容简单签名模式
+1. **Programmability** - Transaction conditions can be defined with scripts
+2. **Flexibility** - Supports multiple transaction types
+3. **Security** - Advanced features such as multisignature and time locks
+4. **Compatibility** - Backward-compatible with the simple signature model
 
-脚本系统是比特币"可编程货币"概念的基础。虽然它不如以太坊的智能合约强大，但它的简单性和安全性是经过时间验证的。
+The script system is the foundation of Bitcoin's concept of "programmable money." Although it is not as powerful as Ethereum smart contracts, its simplicity and security have stood the test of time.
 
-在下一篇文章中，我们将探索网络层，实现节点之间的通信和区块同步。
+In the next article, we will explore the network layer and implement communication and block synchronization between nodes.
 
 ---
 
-**代码仓库**: 完整代码见 `src/script/` 目录
+**Code repository**: See the `src/script/` directory for the complete code
 
-**相关文档**:
+**Related documentation**:
 - [Bitcoin Script Wiki](https://en.bitcoin.it/wiki/Script)
 - [BIP 16 - P2SH](https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki)
 - [BIP 11 - M-of-N Multisig](https://github.com/bitcoin/bips/blob/master/bip-0011.mediawiki)
