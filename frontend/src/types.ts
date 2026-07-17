@@ -1,4 +1,4 @@
-// 区块类型
+// Block type
 export interface Block {
   index: number
   previousHash: string
@@ -10,7 +10,9 @@ export interface Block {
   hash: string
 }
 
-// 交易输入
+
+
+// Transaction input
 export interface TxInput {
   txId: string
   outputIndex: number
@@ -18,13 +20,13 @@ export interface TxInput {
   publicKey?: string
 }
 
-// 交易输出
+// Transaction output
 export interface TxOutput {
   amount: number
   address: string
 }
 
-// 交易类型
+// Transaction type
 export interface Transaction {
   id: string
   inputs: TxInput[]
@@ -32,7 +34,7 @@ export interface Transaction {
   timestamp: number
 }
 
-// 钱包类型
+// Wallet type
 export interface Wallet {
   address: string
   publicKey: string
@@ -40,7 +42,7 @@ export interface Wallet {
   balance: number
 }
 
-// UTXO 类型
+// UTXO type
 export interface UTXO {
   txId: string
   outputIndex: number
@@ -48,16 +50,15 @@ export interface UTXO {
   address: string
 }
 
-// Merkle 证明元素
+// Merkle proof element
 export interface MerkleProofElement {
   hash: string
   position: 'left' | 'right'
 }
 
-// API 响应类型
+// API response type
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
   error?: string
 }
-
