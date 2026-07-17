@@ -8,7 +8,7 @@ const state = ServerState.getInstance()
 
 /**
  * POST /api/merkle/verify
- * 验证 Merkle 证明
+ * Verify a Merkle proof.
  * Body: { blockIndex: number, txId: string }
  */
 router.post('/merkle/verify', (req: Request, res: Response) => {
@@ -18,7 +18,7 @@ router.post('/merkle/verify', (req: Request, res: Response) => {
     if (blockIndex === undefined || !txId) {
       return res.status(400).json({
         success: false,
-        error: '缺少必要参数: blockIndex, txId',
+        error: 'Missing required parameters: blockIndex, txId',
       })
     }
     
@@ -26,39 +26,39 @@ router.post('/merkle/verify', (req: Request, res: Response) => {
     if (!block) {
       return res.status(404).json({
         success: false,
-        error: '区块不存在',
+        error: 'Block not found',
       })
     }
     
-    // 检查交易是否在区块中
+    // Check whether the transaction is in the block
     const tx = block.transactions.find((t) => t.id === txId)
     if (!tx) {
       return res.status(404).json({
         success: false,
-        error: '交易不在指定区块中',
+        error: 'Transaction is not in the specified block',
       })
     }
     
-    // 构建 Merkle 树
+    // Build the Merkle tree
     const txIds = block.transactions.map((t) => t.id)
     const merkleTree = new MerkleTree(txIds)
     
-    // 获取证明路径
+    // Get the proof path
     const proof = merkleTree.getProof(txId)
     if (!proof) {
       return res.status(500).json({
         success: false,
-        error: '无法生成 Merkle 证明',
+        error: 'Unable to generate Merkle proof',
       })
     }
     
-    // 验证证明
+    // Verify the proof
     const isValid = MerkleTree.verify(txId, proof, block.merkleRoot)
     
-    // 获取完整的树结构用于可视化
+    // Get the complete tree structure for visualization
     const rootNode = merkleTree.getRootNode()
     
-    // 序列化树节点
+    // Serialize tree nodes
     function serializeNode(node: any): any {
       if (!node) return null
       return {
@@ -68,10 +68,10 @@ router.post('/merkle/verify', (req: Request, res: Response) => {
       }
     }
     
-    // 计算目标交易的叶子哈希
+    // Calculate the target transaction's leaf hash
     const targetLeafHash = Hash.sha256(txId)
     
-    // 收集验证路径上的所有哈希（用于高亮）
+    // Collect every hash in the proof path for highlighting
     const proofPath = new Set<string>()
     proofPath.add(targetLeafHash)
     let currentHash = targetLeafHash
@@ -112,7 +112,7 @@ router.post('/merkle/verify', (req: Request, res: Response) => {
 
 /**
  * GET /api/merkle/tree/:blockIndex
- * 获取区块的 Merkle 树结构
+ * Get the Merkle tree structure for a block.
  */
 router.get('/merkle/tree/:blockIndex', (req: Request, res: Response) => {
   try {
@@ -121,7 +121,7 @@ router.get('/merkle/tree/:blockIndex', (req: Request, res: Response) => {
     if (isNaN(blockIndex)) {
       return res.status(400).json({
         success: false,
-        error: '无效的区块索引',
+        error: 'Invalid block index',
       })
     }
     
@@ -129,14 +129,14 @@ router.get('/merkle/tree/:blockIndex', (req: Request, res: Response) => {
     if (!block) {
       return res.status(404).json({
         success: false,
-        error: '区块不存在',
+        error: 'Block not found',
       })
     }
     
     const txIds = block.transactions.map((t) => t.id)
     const merkleTree = new MerkleTree(txIds)
     
-    // 序列化 Merkle 树节点
+    // Serialize Merkle tree nodes
     function serializeNode(node: any): any {
       if (!node) return null
       return {
