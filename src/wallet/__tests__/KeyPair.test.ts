@@ -1,8 +1,8 @@
 import {KeyPair} from '../KeyPair'
 
 describe('KeyPair', () => {
-  describe('构造函数', () => {
-    it('应该生成新的密钥对（无参数）', () => {
+  describe('constructor', () => {
+    it('generates a new key pair without arguments', () => {
       const keyPair = new KeyPair()
 
       expect(keyPair.privateKey).toBeTruthy()
@@ -11,7 +11,7 @@ describe('KeyPair', () => {
       expect(keyPair.publicKey).toHaveLength(130)
     })
 
-    it('应该从私钥创建密钥对', () => {
+    it('creates a key pair from a private key', () => {
       const keyPair1 = new KeyPair()
       const privateKey = keyPair1.privateKey
 
@@ -21,7 +21,7 @@ describe('KeyPair', () => {
       expect(keyPair2.publicKey).toBe(keyPair1.publicKey)
     })
 
-    it('不同实例应该生成不同的密钥', () => {
+    it('generates distinct keys for different instances', () => {
       const keyPair1 = new KeyPair()
       const keyPair2 = new KeyPair()
 
@@ -30,8 +30,8 @@ describe('KeyPair', () => {
     })
   })
 
-  describe('sign 和 verify', () => {
-    it('应该能够签名和验证数据', () => {
+  describe('sign and verify', () => {
+    it('signs and verifies data', () => {
       const keyPair = new KeyPair()
       const data = 'Hello, Bitcoin!'
 
@@ -42,7 +42,7 @@ describe('KeyPair', () => {
       expect(isValid).toBe(true)
     })
 
-    it('修改数据后签名应该无效', () => {
+    it('rejects a signature after the data changes', () => {
       const keyPair = new KeyPair()
       const data = 'original data'
       const modifiedData = 'modified data'
@@ -53,7 +53,7 @@ describe('KeyPair', () => {
       expect(isValid).toBe(false)
     })
 
-    it('其他密钥对不能验证签名', () => {
+    it('does not verify a signature with another key pair', () => {
       const keyPair1 = new KeyPair()
       const keyPair2 = new KeyPair()
       const data = 'test data'
@@ -64,23 +64,23 @@ describe('KeyPair', () => {
       expect(isValid).toBe(false)
     })
 
-    it('应该能够使用公钥验证签名（跨密钥对验证）', () => {
-      // Alice 的密钥对
+    it('verifies a signature with the public key from a message', () => {
+      // Create Alice's key pair
       const aliceKeyPair = new KeyPair()
 
-      // 构建交易消息，包含公钥
+      // Build a transaction message containing the public key
       const message = {
         data: 'Transfer 100 BTC',
-        publicKey: aliceKeyPair.publicKey, // 交易中包含公钥
+        publicKey: aliceKeyPair.publicKey, // Include the public key in the transaction
       }
       const messageStr = JSON.stringify(message)
 
-      // Alice 签名
+      // Alice signs the message
       const signature = aliceKeyPair.sign(messageStr)
 
-      // 其他人从交易中获取公钥并验证签名
+      // Another participant reads the public key and verifies the signature
       const {Signature} = require('../../crypto/signature')
-      const publicKeyFromMessage = message.publicKey // 从交易中获取
+      const publicKeyFromMessage = message.publicKey // Read it from the transaction
       const isValid = Signature.verify(
         messageStr,
         signature,
@@ -90,11 +90,11 @@ describe('KeyPair', () => {
       expect(isValid).toBe(true)
     })
 
-    it('使用正确的公钥才能验证签名', () => {
+    it('requires the correct public key to verify a signature', () => {
       const alice = new KeyPair()
       const bob = new KeyPair()
 
-      // Alice 创建消息并签名
+      // Alice creates and signs a message
       const message = {
         content: 'test message',
         publicKey: alice.publicKey,
@@ -104,13 +104,13 @@ describe('KeyPair', () => {
 
       const {Signature} = require('../../crypto/signature')
 
-      // 从消息中获取公钥验证 - 应该成功
+      // Verification succeeds with the public key from the message
       const publicKeyFromMessage = message.publicKey
       expect(
         Signature.verify(messageStr, signature, publicKeyFromMessage)
       ).toBe(true)
 
-      // 如果有人篡改消息中的公钥为 Bob 的公钥 - 验证应该失败
+      // Verification fails if the public key is replaced with Bob's
       const tamperedMessage = {
         ...message,
         publicKey: bob.publicKey,
@@ -122,13 +122,13 @@ describe('KeyPair', () => {
   })
 
   describe('isValid', () => {
-    it('有效的密钥对应该返回 true', () => {
+    it('returns true for a valid key pair', () => {
       const keyPair = new KeyPair()
 
       expect(keyPair.isValid()).toBe(true)
     })
 
-    it('从私钥恢复的密钥对应该有效', () => {
+    it('accepts a key pair restored from a private key', () => {
       const keyPair1 = new KeyPair()
       const keyPair2 = new KeyPair(keyPair1.privateKey)
 
@@ -136,8 +136,8 @@ describe('KeyPair', () => {
     })
   })
 
-  describe('JSON 序列化', () => {
-    it('应该能够导出为 JSON', () => {
+  describe('JSON serialization', () => {
+    it('exports to JSON-compatible data', () => {
       const keyPair = new KeyPair()
       const json = keyPair.toJSON()
 
@@ -147,7 +147,7 @@ describe('KeyPair', () => {
       expect(json.publicKey).toBe(keyPair.publicKey)
     })
 
-    it('应该能够从 JSON 导入', () => {
+    it('imports from JSON-compatible data', () => {
       const keyPair1 = new KeyPair()
       const json = keyPair1.toJSON()
 
@@ -157,7 +157,7 @@ describe('KeyPair', () => {
       expect(keyPair2.publicKey).toBe(keyPair1.publicKey)
     })
 
-    it('导出导入后的密钥对应该能正常工作', () => {
+    it('keeps the key pair usable after export and import', () => {
       const keyPair1 = new KeyPair()
       const data = 'test message'
       const signature = keyPair1.sign(data)
