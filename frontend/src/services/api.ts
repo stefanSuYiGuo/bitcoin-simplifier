@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 30000,
 })
 
-// 响应拦截器
+// Response interceptor
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
@@ -15,7 +15,7 @@ api.interceptors.response.use(
   }
 )
 
-// 区块链 API
+// Blockchain API
 export const blockchainAPI = {
   getBlockchain: () => api.get('/blockchain'),
   getStats: () => api.get('/blockchain/stats'),
@@ -24,7 +24,7 @@ export const blockchainAPI = {
   validate: () => api.get('/blockchain/validate'),
 }
 
-// 钱包 API
+// Wallet API
 export const walletAPI = {
   getWallets: () => api.get('/wallets'),
   createWallet: () => api.post('/wallets'),
@@ -33,7 +33,7 @@ export const walletAPI = {
   getUTXOs: (address: string) => api.get(`/wallets/${address}/utxos`),
 }
 
-// 交易 API
+// Transaction API
 export const transactionAPI = {
   createTransaction: (data: {
     fromAddress: string
@@ -45,7 +45,7 @@ export const transactionAPI = {
   clearPendingTransactions: () => api.delete('/transactions/pending'),
 }
 
-// 挖矿 API
+// Mining API
 export const miningAPI = {
   mine: (data: {
     minerAddress: string
