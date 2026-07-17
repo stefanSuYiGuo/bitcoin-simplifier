@@ -1,44 +1,44 @@
-# 实现一个简单的比特币：Part 1
+# Building a Simple Bitcoin: Part 1
 
-当我们听到比特币这个词的时候，脑海中浮现的可能是价格波动、挖矿、区块链等概念。但如果我们真的想理解比特币的本质，最好的方式就是自己动手实现一个简化版本。在这个系列的第一篇文章中，我们将从最基础的部分开始，逐步构建起比特币系统的核心组件。
+When we hear the word Bitcoin, concepts such as price volatility, mining, and blockchain may immediately come to mind. But if we truly want to understand what Bitcoin is, one of the best approaches is to build a simplified version ourselves. In the first article in this series, we will start with the fundamentals and gradually construct the core components of a Bitcoin system.
 
-## 从一个问题开始
+## Starting with a Question
 
-在传统的银行系统中，所有的交易记录都保存在银行的中心服务器上。如果 Alice 想给 Bob 转账 100 元，银行会在自己的数据库中给 Alice 的账户减去 100 元，给 Bob 的账户加上 100 元。这个过程看起来很简单，但它依赖于一个前提：我们必须信任银行。
+In a traditional banking system, every transaction record is stored on the bank's central servers. If Alice wants to send Bob 100 units of currency, the bank subtracts 100 from Alice's account and adds 100 to Bob's account in its database. The process appears simple, but it depends on one assumption: we must trust the bank.
 
-比特币的创新之处在于，它试图在没有中心化机构的情况下，让一群互不信任的人能够安全地进行转账。要实现这个目标，我们需要解决几个关键问题：如何证明一笔钱确实属于你？如何防止你把同一笔钱花两次？如何让所有人对账本达成共识？
+Bitcoin's innovation is that it enables people who do not trust one another to transfer value securely without relying on a central authority. Achieving this requires us to solve several essential problems: How can you prove that funds belong to you? How can the system prevent you from spending the same funds twice? How can every participant agree on the state of the ledger?
 
-在这篇文章中，我们先聚焦于第一个问题：如何证明所有权。
+This article begins with the first question: how to prove ownership.
 
-## 密码学基础：数字签名
+## Cryptographic Foundations: Digital Signatures
 
-比特币使用椭圆曲线数字签名算法（ECDSA）来证明交易的所有权。核心原理是一对密钥：
+Bitcoin uses the Elliptic Curve Digital Signature Algorithm (ECDSA) to prove authorization over transaction funds. Its core mechanism relies on a key pair:
 
-- **私钥**：256 位随机数，只有所有者知道，用于签名
-- **公钥**：从私钥通过椭圆曲线运算得到，可以公开，用于验证签名
+- **Private key**: A 256-bit random number known only to its owner and used to create signatures
+- **Public key**: Derived from the private key through elliptic-curve operations, safe to share, and used to verify signatures
 
-数字签名的特性：
-- ✅ 用私钥签名很容易
-- ✅ 用公钥验证签名很容易
-- ❌ 从签名或公钥反推私钥几乎不可能
-- ❌ 没有私钥就无法伪造签名
+Digital signatures have several important properties:
+- ✅ Creating a signature with a private key is straightforward
+- ✅ Verifying a signature with a public key is straightforward
+- ❌ Recovering the private key from a signature or public key is computationally infeasible
+- ❌ A valid signature cannot be forged without the private key
 
-**签名和验证流程：**
+**Signing and verification flow:**
 
 ```
-Alice 签名                    Bob/矿工 验证
+Alice signs                  Bob/miner verifies
 ─────────────────            ─────────────────
-消息 "转账 50 BTC"           收到: 消息 + 签名 + Alice公钥
+Message "Transfer 50 BTC"   Receives: message + signature + Alice's public key
     ↓                             ↓
-计算哈希 hash(消息)           计算哈希 hash(消息)
+Calculate hash(message)      Calculate hash(message)
     ↓                             ↓
-用私钥签名                     用公钥验证
-sign(hash, 私钥)              verify(hash, 签名, 公钥)
+Sign with private key        Verify with public key
+sign(hash, private key)      verify(hash, signature, public key)
     ↓                             ↓
-广播: 消息 + 签名 + 公钥      ✓ 验证通过
+Broadcast: message + signature + public key    ✓ Verification succeeds
 ```
 
-**代码实现：**
+**Implementation:**
 
 ```typescript
 export class KeyPair {
@@ -66,15 +66,15 @@ export class KeyPair {
 }
 ```
 
-在实际交易中，发送者用私钥签名，验证者（矿工/节点）使用交易中附带的公钥来验证签名的有效性。
+In a transaction, the sender signs with a private key, while verifiers such as miners and nodes use the public key included in the transaction to validate the signature.
 
-## 从公钥到地址
+## From Public Key to Address
 
-有了密钥对之后，下一个问题是：我们要把钱转给谁？在比特币中，我们不是直接用公钥来接收比特币，而是用一个叫做"地址"的东西。地址是从公钥经过一系列哈希运算和编码得到的一串字符。
+Once we have a key pair, the next question is: where should funds be sent? In Bitcoin, recipients generally use an address rather than a raw public key. An address is a string derived from the public key through a sequence of hashing and encoding operations.
 
-为什么要这么做呢？有几个原因。首先，公钥比较长，不方便使用和记忆。其次，通过哈希运算，我们可以给公钥增加一层额外的安全保护。最后，经过特殊的编码（Base58 编码），我们可以让地址更容易辨认，避免混淆相似的字符。
+There are several reasons for this design. Public keys are long and inconvenient to handle. Hashing also adds a layer of protection around the public key. Finally, Base58 encoding makes addresses easier for people to read by excluding visually ambiguous characters.
 
-地址的生成过程是这样的：首先对公钥进行 SHA-256 哈希，然后对结果再进行 RIPEMD-160 哈希，最后用 Base58 编码。这样得到的地址通常以数字 1 开头，长度在 26 到 35 个字符之间。
+The address-generation process first hashes the public key with SHA-256, hashes that result with RIPEMD-160, and finally encodes it with Base58. A traditional Bitcoin address produced through the complete real-world process commonly begins with 1 and contains 26 to 35 characters.
 
 
 ```typescript
@@ -86,107 +86,107 @@ private generateAddress(): string {
 }
 ```
 
-这个过程看起来有些复杂，但每一步都有其意义。SHA-256 提供了强大的抗碰撞特性，RIPEMD-160 将结果压缩到更短的长度，而 Base58 编码则让地址对人类更友好。Base58 编码去除了容易混淆的字符，比如数字 0 和字母 O，数字 1 和字母 I。
+Although the process may look complicated, every step serves a purpose. SHA-256 provides strong collision resistance, RIPEMD-160 shortens the result, and Base58 makes the address more human-friendly. Base58 excludes easily confused characters such as the digit 0 and letter O, as well as the digit 1 and letter I.
 
-## UTXO：一种不同的记账方式
+## UTXO: A Different Accounting Model
 
-在解释了如何证明身份之后，我们需要思考另一个问题：如何记录谁有多少比特币？
+After explaining how ownership is proven, we need to consider another question: how do we record how much Bitcoin each participant controls?
 
-传统的银行系统使用账户模型，每个账户有一个余额。比如 Alice 的账户显示有 500 元，Bob 的账户显示有 300 元。当 Alice 给 Bob 转账 100 元时，系统会更新两个账户的余额。
+Traditional banking systems use an account model in which every account has a balance. For example, Alice's account might contain 500 units and Bob's account 300 units. When Alice sends Bob 100 units, the system updates both account balances.
 
-比特币采用了一种完全不同的方式，叫做 UTXO 模型。UTXO 是 "Unspent Transaction Output" 的缩写，意思是"未花费的交易输出"。这个名字听起来有些拗口，但它的概念其实很直观。
+Bitcoin uses a fundamentally different approach called the UTXO model. UTXO stands for "Unspent Transaction Output." Although the term may initially sound unfamiliar, the underlying concept is intuitive.
 
-让我们对比一下两种模型：
+Let us compare the two models:
 
-**账户模型（传统银行）：**
+**Account model (traditional banking):**
 
-| 账户名 | 交易前余额 | 交易后余额 | 说明 |
+| Account | Balance before | Balance after | Description |
 |--------|-----------|-----------|------|
-| Alice  | 500 元    | 400 元    | 直接修改余额 -100 |
-| Bob    | 300 元    | 400 元    | 直接修改余额 +100 |
+| Alice  | 500 units | 400 units | Balance updated by -100 |
+| Bob    | 300 units | 400 units | Balance updated by +100 |
 
-**UTXO 模型（比特币）：**
+**UTXO model (Bitcoin):**
 
-交易前：
+Before the transaction:
 
-| UTXO ID | 金额 | 所有者 | 状态 |
+| UTXO ID | Amount | Owner | Status |
 |---------|------|--------|------|
-| UTXO_1  | 300 元 | Alice | 有效 |
-| UTXO_2  | 200 元 | Alice | 有效 |
-| UTXO_3  | 300 元 | Bob   | 有效 |
+| UTXO_1  | 300 units | Alice | Unspent |
+| UTXO_2  | 200 units | Alice | Unspent |
+| UTXO_3  | 300 units | Bob   | Unspent |
 
-- Alice 实际余额：300 + 200 = **500 元**
-- Bob 实际余额：300 = **300 元**
+- Alice's effective balance: 300 + 200 = **500 units**
+- Bob's effective balance: 300 = **300 units**
 
-Alice 转给 Bob 100 元后：
+After Alice sends Bob 100 units:
 
-| UTXO ID | 金额 | 所有者 | 状态 | 说明 |
+| UTXO ID | Amount | Owner | Status | Description |
 |---------|------|--------|------|------|
-| UTXO_1  | 300 元 | Alice | 已花费 | 被交易消耗 |
-| UTXO_2  | 200 元 | Alice | 有效 | 未使用 |
-| UTXO_3  | 300 元 | Bob   | 有效 | 未使用 |
-| UTXO_4  | 100 元 | Bob   | 有效 | 新创建 |
-| UTXO_5  | 200 元 | Alice | 有效 | 找零 |
+| UTXO_1  | 300 units | Alice | Spent | Consumed by the transaction |
+| UTXO_2  | 200 units | Alice | Unspent | Not used |
+| UTXO_3  | 300 units | Bob   | Unspent | Not used |
+| UTXO_4  | 100 units | Bob   | Unspent | Newly created |
+| UTXO_5  | 200 units | Alice | Unspent | Change |
 
-- Alice 实际余额：200 + 200 = **400 元**
-- Bob 实际余额：300 + 100 = **400 元**
+- Alice's effective balance: 200 + 200 = **400 units**
+- Bob's effective balance: 300 + 100 = **400 units**
 
-我们可以把 UTXO 想象成一张张不同面额的纸币。假设 Alice 想给 Bob 转账 100 元，她手里有一张 150 元的"纸币"（一个 UTXO）。她不能直接撕掉一部分给 Bob，而是要把整张 150 元的纸币花掉，然后创建两张新的纸币：一张 100 元的给 Bob，一张 50 元的找零给自己。
+We can think of UTXOs as banknotes with different denominations. Suppose Alice wants to send Bob 100 units and holds a 150-unit "banknote" represented by one UTXO. She cannot tear off part of it. Instead, she spends the entire 150-unit UTXO and creates two new outputs: 100 units for Bob and 50 units in change for herself.
 
-让我们看一个完整的例子：
+Consider a complete example:
 
-**初始状态：**
+**Initial state:**
 
-| UTXO | 金额 | 所有者 | 状态 |
+| UTXO | Amount | Owner | Status |
 |------|------|--------|------|
-| TX_0:0 | 150 BTC | Alice | 有效 |
-| TX_1:0 | 200 BTC | Carol | 有效 |
+| TX_0:0 | 150 BTC | Alice | Unspent |
+| TX_1:0 | 200 BTC | Carol | Unspent |
 
-**Alice 创建交易 TX_2：**
+**Alice creates transaction TX_2:**
 
-交易输入：
+Transaction input:
 
-| 输入索引 | 引用 UTXO | 金额 | 签名 | 公钥 |
+| Input index | Referenced UTXO | Amount | Signature | Public key |
 |---------|----------|------|------|------|
-| 0 | TX_0:0 | 150 BTC | Alice签名 | Alice公钥 |
+| 0 | TX_0:0 | 150 BTC | Alice's signature | Alice's public key |
 
-交易输出：
+Transaction outputs:
 
-| 输出索引 | 金额 | 接收地址 | 说明 |
+| Output index | Amount | Recipient address | Description |
 |---------|------|---------|------|
-| 0 | 100 BTC | Bob地址 | 转账 |
-| 1 | 50 BTC | Alice地址 | 找零 |
+| 0 | 100 BTC | Bob's address | Payment |
+| 1 | 50 BTC | Alice's address | Change |
 
-- 输入总额：150 BTC
-- 输出总额：150 BTC
-- 矿工费：0 BTC
-- 验证者使用 Alice公钥 来验证 Alice签名 的有效性
+- Total input amount: 150 BTC
+- Total output amount: 150 BTC
+- Mining fee: 0 BTC
+- A verifier uses Alice's public key to validate Alice's signature
 
-**交易确认后的状态：**
+**State after confirmation:**
 
-| UTXO | 金额 | 所有者 | 状态 | 说明 |
+| UTXO | Amount | Owner | Status | Description |
 |------|------|--------|------|------|
-| TX_0:0 | 150 BTC | Alice | 已花费 | 被 TX_2 消耗 |
-| TX_1:0 | 200 BTC | Carol | 有效 | 未使用 |
-| TX_2:0 | 100 BTC | Bob | 有效 | 新创建 |
-| TX_2:1 | 50 BTC | Alice | 有效 | 找零 |
+| TX_0:0 | 150 BTC | Alice | Spent | Consumed by TX_2 |
+| TX_1:0 | 200 BTC | Carol | Unspent | Not used |
+| TX_2:0 | 100 BTC | Bob | Unspent | Newly created |
+| TX_2:1 | 50 BTC | Alice | Unspent | Change |
 
-**余额汇总：**
-- Alice：50 BTC (TX_2:1)
-- Bob：100 BTC (TX_2:0)
-- Carol：200 BTC (TX_1:0)
+**Balance summary:**
+- Alice: 50 BTC (TX_2:1)
+- Bob: 100 BTC (TX_2:0)
+- Carol: 200 BTC (TX_1:0)
 
-这种模型有几个优势。首先，每个 UTXO 只能被花费一次，这让双花检测变得很简单：系统只需要检查一个 UTXO 是否已经被使用过。其次，不同的 UTXO 之间是相互独立的，这意味着系统可以并行处理多笔交易，只要它们不涉及相同的 UTXO。最后，UTXO 模型天然地提供了更好的隐私保护，因为每次交易都可以使用新的地址。
+This model offers several advantages. First, each UTXO can be spent only once, which makes double-spend detection straightforward: the system only needs to check whether a UTXO has already been consumed. Second, UTXOs are independent, so transactions can be processed in parallel as long as they do not reference the same outputs. Finally, the UTXO model can improve privacy because a new address may be used for each transaction.
 
-## 交易的结构
+## Transaction Structure
 
-在 UTXO 模型中，每笔交易都包含两个主要部分：输入和输出。输入指向之前的 UTXO，证明你有权花费它们。输出创建新的 UTXO，指定金额和接收地址。
+In the UTXO model, every transaction contains two main components: inputs and outputs. Inputs reference existing UTXOs and provide evidence that the spender is authorized to use them. Outputs create new UTXOs with specified amounts and recipient addresses.
 
-交易输入需要包含几个关键信息：引用的交易 ID、输出索引、签名和公钥。交易 ID 和输出索引用来定位具体的 UTXO。签名用来证明你确实有权花费这个 UTXO。公钥则让其他人（矿工和节点）可以验证你的签名是否有效。
+A transaction input contains several essential pieces of information: the referenced transaction ID, output index, signature, and public key. The transaction ID and output index locate a specific UTXO. The signature demonstrates authorization to spend it, while the public key allows miners and nodes to verify that signature.
 
-验证过程是这样的：系统会用输入中提供的公钥，结合引用的 UTXO 的接收地址，来验证两件事：第一，这个公钥对应的地址确实是 UTXO 的接收地址；第二，签名确实是用这个公钥对应的私钥生成的。只有两个条件都满足，这个输入才是有效的。
+During validation, the system uses the public key supplied by the input and the recipient address of the referenced UTXO to verify two conditions. First, the address derived from the public key must match the UTXO recipient address. Second, the signature must have been created with the corresponding private key. The input is valid only when both conditions hold.
 
-需要说明的是，真实的比特币使用了更复杂的脚本系统（Script）。在真实比特币中，签名和公钥被包含在 `scriptSig`（解锁脚本）字段中，而不是像我们这样直接存储。比特币的脚本系统是一个基于栈的语言，提供了更大的灵活性，可以实现多签名、时间锁等高级功能。我们这里为了简化，直接存储签名和公钥，这样更容易理解核心概念。
+Real Bitcoin uses a more sophisticated scripting system called Script. Signatures and public keys are placed in the `scriptSig` unlocking script rather than stored directly as they are in this simplified model. Bitcoin Script is a stack-based language that supports flexible conditions such as multisignature authorization and time locks. This implementation stores the signature and public key directly to make the core concepts easier to understand.
 
 ```typescript
 export class TxInput {
@@ -197,10 +197,10 @@ export class TxInput {
     public publicKey: string = ''
   ) {
     if (!txId || txId.trim().length === 0) {
-      throw new Error('交易 ID 不能为空')
+      throw new Error('Transaction ID cannot be empty')
     }
     if (outputIndex < 0) {
-      throw new Error('输出索引不能为负数')
+      throw new Error('Output index cannot be negative')
     }
   }
 
@@ -210,9 +210,9 @@ export class TxInput {
 }
 ```
 
-这个类的设计很简洁。每个输入都明确指向一个 UTXO，通过交易 ID 和输出索引来定位。签名和公钥在创建输入时可能还不存在，因为需要先构建完整的交易内容才能签名，所以它们有默认的空值。
+This class has a deliberately simple design. Each input explicitly identifies a UTXO by transaction ID and output index. The signature and public key may not exist when the input is first created because the complete transaction content must be assembled before it can be signed, so both fields default to empty strings.
 
-交易输出的结构更加简单，只需要两个字段：金额和接收地址。金额必须大于零，地址不能为空。这些基本的验证规则在构造函数中就被强制执行了。
+Transaction outputs are even simpler and require only an amount and recipient address. The amount must be greater than zero and the address cannot be empty. These basic validation rules are enforced by the constructor.
 
 ```typescript
 export class TxOutput {
@@ -221,66 +221,66 @@ export class TxOutput {
     public readonly address: string
   ) {
     if (amount <= 0) {
-      throw new Error('输出金额必须大于 0')
+      throw new Error('Output amount must be greater than 0')
     }
     if (!address || address.trim().length === 0) {
-      throw new Error('接收地址不能为空')
+      throw new Error('Recipient address cannot be empty')
     }
   }
 }
 ```
 
-一笔完整的交易可能有多个输入和多个输出。所有输入的总金额必须大于或等于所有输出的总金额。如果有差额，这个差额就成为矿工费，奖励给打包这笔交易的矿工。
+A complete transaction may contain multiple inputs and outputs. The total value of all inputs must be greater than or equal to the total value of all outputs. Any difference becomes the mining fee paid to the miner who includes the transaction in a block.
 
-让我们看一个更复杂的例子，Alice 有多个 UTXO，想给 Bob 转账 180 BTC：
+Consider a more complex example in which Alice owns several UTXOs and wants to send Bob 180 BTC:
 
-**Alice 的 UTXO：**
+**Alice's UTXOs:**
 
-| UTXO | 金额 | 所有者 |
+| UTXO | Amount | Owner |
 |------|------|--------|
 | TX_A:0 | 100 BTC | Alice |
 | TX_B:0 | 50 BTC | Alice |
 | TX_C:0 | 60 BTC | Alice |
 
-**Alice 想转给 Bob 180 BTC，创建新交易 TX_D：**
+**Alice creates transaction TX_D to send Bob 180 BTC:**
 
-交易输入：
+Transaction inputs:
 
-| 输入索引 | 引用 UTXO | 金额 | 签名 | 公钥 |
+| Input index | Referenced UTXO | Amount | Signature | Public key |
 |---------|----------|------|------|------|
-| 0 | TX_A:0 | 100 BTC | Alice签名 | Alice公钥 |
-| 1 | TX_B:0 | 50 BTC | Alice签名 | Alice公钥 |
-| 2 | TX_C:0 | 60 BTC | Alice签名 | Alice公钥 |
+| 0 | TX_A:0 | 100 BTC | Alice's signature | Alice's public key |
+| 1 | TX_B:0 | 50 BTC | Alice's signature | Alice's public key |
+| 2 | TX_C:0 | 60 BTC | Alice's signature | Alice's public key |
 
-交易输出：
+Transaction outputs:
 
-| 输出索引 | 金额 | 接收地址 | 说明 |
+| Output index | Amount | Recipient address | Description |
 |---------|------|---------|------|
-| 0 | 180 BTC | Bob | 转账 |
-| 1 | 27 BTC | Alice | 找零 |
+| 0 | 180 BTC | Bob | Payment |
+| 1 | 27 BTC | Alice | Change |
 
-**交易汇总：**
+**Transaction summary:**
 
-| 项目 | 金额 |
+| Item | Amount |
 |------|------|
-| 输入总额 | 210 BTC |
-| 输出总额 | 207 BTC |
-| 矿工费 | 3 BTC |
+| Total inputs | 210 BTC |
+| Total outputs | 207 BTC |
+| Mining fee | 3 BTC |
 
-**交易验证：**
+**Transaction validation:**
 
-- 所有输入的 UTXO 都存在
-- 所有签名都有效（每个输入都包含签名和公钥用于验证）
-- 输入总额 (210) ≥ 输出总额 (207)
-- 矿工费 = 210 - 207 = 3 BTC
+- Every input UTXO exists
+- Every signature is valid, with each input containing the signature and public key needed for verification
+- Total inputs (210) ≥ total outputs (207)
+- Mining fee = 210 - 207 = 3 BTC
 
-在这个例子中，Alice 使用了三个 UTXO 作为输入，总共 210 BTC。她创建了两个输出：180 BTC 给 Bob，27 BTC 找零给自己。剩余的 3 BTC 成为矿工费。
+In this example, Alice uses three UTXOs totaling 210 BTC as inputs. She creates two outputs: 180 BTC for Bob and 27 BTC in change for herself. The remaining 3 BTC becomes the mining fee.
 
-## UTXO 集合的管理
+## Managing the UTXO Set
 
-系统需要一个地方来存储所有当前有效的 UTXO。这就是 UTXO 集合的作用。每当有新的交易被确认，系统会从 UTXO 集合中移除被花费的 UTXO，同时添加新创建的 UTXO。
+The system needs a place to store every currently spendable UTXO. This is the role of the UTXO set. Whenever a new transaction is confirmed, the system removes the outputs it spends and adds the outputs it creates.
 
-UTXO 集合使用一个 Map 数据结构来存储，键是由交易 ID 和输出索引组成的字符串，值是交易输出本身。这种设计让查找操作的时间复杂度是 O(1)，非常高效。
+The UTXO set uses a `Map` in which each key combines a transaction ID and output index, and each value is the transaction output itself. This design provides efficient O(1) average-time lookups.
 
 ```typescript
 export class UTXOSet {
@@ -302,9 +302,9 @@ export class UTXOSet {
 }
 ```
 
-UTXO 集合还提供了一些实用的方法。比如查询某个地址有哪些 UTXO，计算某个地址的总余额。这些操作都需要遍历整个 UTXO 集合，但因为使用了高效的数据结构，即使有大量的 UTXO，性能也能保持在可接受的范围内。
+The UTXO set also provides useful operations such as finding the outputs associated with an address and calculating that address's total balance. These operations traverse the complete set. This simple approach is suitable for the educational simulator, although production Bitcoin software uses more sophisticated storage and indexing strategies at scale.
 
-获取某个地址的所有 UTXO 是构建交易时的关键操作。当 Alice 想给 Bob 转账时，系统需要找出 Alice 拥有的所有 UTXO，然后选择足够的 UTXO 来满足转账金额。
+Finding every UTXO associated with an address is a key step in transaction construction. When Alice wants to pay Bob, the system finds Alice's available UTXOs and selects enough of them to cover the transfer amount.
 
 ```typescript
 getUTXOsByAddress(address: string): Array<{
@@ -329,45 +329,45 @@ getUTXOsByAddress(address: string): Array<{
 }
 ```
 
-这个方法遍历所有 UTXO，找出属于指定地址的那些。返回的结果不仅包含 UTXO 本身，还包含了它的位置信息（交易 ID 和输出索引），这样就可以在构建交易输入时直接使用。
+This method scans all UTXOs and selects those belonging to the requested address. Each result includes both the output and its location—the transaction ID and output index—so it can be used directly when constructing transaction inputs.
 
-让我们通过一个完整的例子来看 UTXO 集合的状态变化：
+The following example demonstrates how the UTXO set changes over time:
 
 ```typescript
-// 初始化 UTXO 集合
+// Initialize the UTXO set
 const utxoSet = new UTXOSet()
 
-// 创世交易：给 Alice 100 BTC
-utxoSet.add('tx0', 0, new TxOutput(100, 'Alice地址'))
+// Genesis transaction: give Alice 100 BTC
+utxoSet.add('tx0', 0, new TxOutput(100, 'AliceAddress'))
 
-console.log('Alice 余额:', utxoSet.getBalance('Alice地址'))
-// 输出: 100
+console.log('Alice balance:', utxoSet.getBalance('AliceAddress'))
+// Output: 100
 
-// Alice 转给 Bob 60 BTC
-// 交易 tx1 的输入引用 tx0:0，输出是 60 给 Bob，40 找零给 Alice
-utxoSet.remove('tx0', 0)  // 花费旧的 UTXO
-utxoSet.add('tx1', 0, new TxOutput(60, 'Bob地址'))      // Bob 收到
-utxoSet.add('tx1', 1, new TxOutput(40, 'Alice地址'))    // Alice 找零
+// Alice sends Bob 60 BTC
+// Transaction tx1 references tx0:0 and creates 60 for Bob plus 40 in change for Alice
+utxoSet.remove('tx0', 0)  // Spend the old UTXO
+utxoSet.add('tx1', 0, new TxOutput(60, 'BobAddress'))      // Bob receives payment
+utxoSet.add('tx1', 1, new TxOutput(40, 'AliceAddress'))    // Alice receives change
 
-console.log('Alice 余额:', utxoSet.getBalance('Alice地址'))  // 40
-console.log('Bob 余额:', utxoSet.getBalance('Bob地址'))      // 60
+console.log('Alice balance:', utxoSet.getBalance('AliceAddress'))  // 40
+console.log('Bob balance:', utxoSet.getBalance('BobAddress'))      // 60
 
-// 查看 Alice 拥有的 UTXO
-const aliceUTXOs = utxoSet.getUTXOsByAddress('Alice地址')
-console.log('Alice 的 UTXO:', aliceUTXOs)
-// 输出: [{ txId: 'tx1', outputIndex: 1, output: { amount: 40, address: 'Alice地址' }}]
+// Inspect Alice's UTXOs
+const aliceUTXOs = utxoSet.getUTXOsByAddress('AliceAddress')
+console.log("Alice's UTXOs:", aliceUTXOs)
+// Output: [{ txId: 'tx1', outputIndex: 1, output: { amount: 40, address: 'AliceAddress' }}]
 ```
 
-这个例子展示了 UTXO 集合如何随着交易的进行而动态更新。每笔交易都会消费一些 UTXO，同时创建新的 UTXO，整个系统通过这种方式追踪每个人的余额。
+This example shows how the UTXO set changes as transactions are processed. Each transaction consumes existing outputs and creates new ones, allowing the system to track the funds controlled by every participant.
 
-## 哈希：数字世界的指纹
+## Hashes: Fingerprints for Digital Data
 
-哈希函数是比特币的核心组件之一。它的特点是：
-- **固定长度输出**：无论输入多大，输出长度固定
-- **单向不可逆**：无法从哈希值反推原始数据
-- **雪崩效应**：输入微小变化，输出完全不同
+Hash functions are one of Bitcoin's core building blocks. They have several important properties:
+- **Fixed-length output**: The output length remains constant regardless of the input size
+- **One-way operation**: The original data cannot feasibly be recovered from its hash
+- **Avalanche effect**: A small input change produces a completely different output
 
-**代码实现：**
+**Implementation:**
 
 ```typescript
 export class Hash {
@@ -386,33 +386,33 @@ export class Hash {
 }
 ```
 
-**比特币中的哈希算法：**
-- **SHA-256**：产生 256 位哈希，用于交易 ID、挖矿、区块链接
-- **双重 SHA-256**：两次 SHA-256，提供额外安全性
-- **RIPEMD-160**：产生 160 位哈希，用于地址生成（更短）
+**Hash algorithms used in Bitcoin:**
+- **SHA-256**: Produces a 256-bit hash used for transaction identifiers, mining, and block linking
+- **Double SHA-256**: Applies SHA-256 twice and is used throughout the Bitcoin protocol
+- **RIPEMD-160**: Produces a shorter 160-bit hash used in address construction
 
-**哈希的应用场景：**
+**Applications of hashing:**
 
-| 场景 | 流程 |
+| Use case | Process |
 |------|------|
-| 交易 ID | 交易内容 → SHA-256 → 唯一标识符 |
-| 地址生成 | 公钥 → SHA-256 → RIPEMD-160 → Base58 编码 |
-| 工作量证明 | 区块头 + nonce → SHA-256 → 满足难度要求 |
-| 区块链接 | 每个区块包含前一个区块的哈希值 |
+| Transaction ID | Transaction content → SHA-256 → unique identifier |
+| Address generation | Public key → SHA-256 → RIPEMD-160 → Base58 encoding |
+| Proof of work | Block header + nonce → SHA-256 → difficulty target satisfied |
+| Block linking | Each block contains the previous block's hash |
 
-**雪崩效应示例：**
+**Avalanche-effect example:**
 
 ```
 "Hello World"  → a591a6d40bf420404a011733cfb7b190...
-"Hello World!" → 7f83b1657ff1fc53b92dc18148a1d65d... (完全不同)
-"hello world"  → b94d27b9934d3e08a52e52d7da7dabfa... (完全不同)
+"Hello World!" → 7f83b1657ff1fc53b92dc18148a1d65d... (completely different)
+"hello world"  → b94d27b9934d3e08a52e52d7da7dabfa... (completely different)
 ```
 
-微小的输入变化导致输出完全不同，这让任何篡改都会被立即发现。
+A tiny change in the input produces a completely different output, making data tampering immediately apparent.
 
-## 钱包：把所有东西整合在一起
+## Wallets: Bringing the Components Together
 
-有了前面这些基础组件，我们就可以构建钱包了。钱包是用户与比特币系统交互的主要接口。一个钱包包含了密钥对，可以生成地址，对交易进行签名。
+With these foundational components in place, we can build a wallet. A wallet is the primary interface through which a user interacts with the Bitcoin system. It contains a key pair, derives an address, and signs transaction data.
 
 ```typescript
 export class Wallet {
@@ -438,105 +438,104 @@ export class Wallet {
 }
 ```
 
-创建钱包的过程很简单。如果提供了私钥，钱包会从这个私钥恢复；如果没有提供，就生成一个新的密钥对。无论哪种方式，钱包都会计算出对应的地址。
+Wallet creation is straightforward. If a private key is provided, the wallet is restored from that key; otherwise, it generates a new key pair. In both cases, the wallet derives the corresponding address.
 
-钱包提供了签名方法，这是创建交易的关键步骤。当用户想要花费某个 UTXO 时，他需要用自己的私钥对交易进行签名，证明他确实有权使用这个 UTXO。其他人可以用交易中提供的公钥来验证这个签名。
+The wallet provides a signing method, which is essential to transaction creation. When a user wants to spend a UTXO, the transaction must be signed with the appropriate private key to demonstrate authorization. Other participants can verify that signature with the public key provided by the transaction.
 
-钱包还提供了导出和导入功能。用户可以备份自己的私钥，然后在另一个地方用这个私钥恢复钱包。这个功能极其重要，因为如果私钥丢失了，对应地址上的所有比特币也就永远丢失了。
+The wallet also supports export and import. A user can back up the private key and later restore the wallet elsewhere. This is critical because losing the private key permanently removes the ability to spend funds controlled by its corresponding address.
 
-下面是一个完整的钱包使用示例：
+The following example demonstrates a complete wallet workflow:
 
 ```typescript
-// 1. 创建钱包
+// 1. Create wallets
 const alice = new Wallet()
 const bob = new Wallet()
 
-console.log('Alice 的地址:', alice.address)
-// 输出: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
-console.log('Bob 的地址:', bob.address)
+console.log("Alice's address:", alice.address)
+// Output: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+console.log("Bob's address:", bob.address)
 
-// 2. Alice 对交易消息进行签名
+// 2. Alice signs a transaction message
 const message = 'Transfer 50 BTC to Bob'
 const signature = alice.sign(message)
-console.log('Alice 的签名:', signature)
-// 输出: 304502210089ab3c...
+console.log("Alice's signature:", signature)
+// Output: 304502210089ab3c...
 
-// 3. Alice 将消息、签名和公钥一起发送
+// 3. Alice sends the message, signature, and public key together
 const transaction = {
   message: message,
   signature: signature,
-  publicKey: alice.publicKey  // 其他人需要这个来验证
+  publicKey: alice.publicKey  // Other participants need this for verification
 }
 
-// 4. Bob（或任何人）验证签名
-// 注意：实际场景中，验证者需要用签名者的公钥来验证
-// 这里我们用 Signature.verify() 而不是 wallet.verify()
+// 4. Bob, or any other participant, verifies the signature
+// The verifier must use the signer's public key
+// Use Signature.verify() rather than wallet.verify() in this scenario
 import { Signature } from './crypto/signature'
 
 const isValid = Signature.verify(
   transaction.message,
   transaction.signature,
-  transaction.publicKey  // 使用 Alice 的公钥
+  transaction.publicKey  // Use Alice's public key
 )
-console.log('签名是否有效:', isValid)  // true
+console.log('Is the signature valid?', isValid)  // true
 
-// 5. Alice 也可以自己验证（用于测试）
+// 5. Alice can also verify her own signature for testing
 const selfVerify = alice.verify(message, signature)
-console.log('自验证:', selfVerify)  // true
+console.log('Self-verification:', selfVerify)  // true
 
-// 6. 导出钱包信息（谨慎处理！包含私钥）
+// 6. Export wallet data; handle it carefully because it contains the private key
 const walletData = alice.export()
-console.log('钱包信息:', walletData)
+console.log('Wallet data:', walletData)
 // {
 //   privateKey: 'e9873d...',
 //   publicKey: '04a34b...',
 //   address: '1A1zP1...'
 // }
 
-// 7. 从私钥恢复钱包
+// 7. Restore a wallet from the private key
 const recovered = Wallet.fromPrivateKey(walletData.privateKey)
-console.log('恢复的地址:', recovered.address)  // 与原地址相同
+console.log('Recovered address:', recovered.address)  // Matches the original address
 ```
 
-整个系统的工作流程可以这样理解：
+The complete system workflow can be understood as follows:
 
-**比特币系统工作流程：**
+**Bitcoin system workflow:**
 
 ```
-1. 创建钱包
-   Wallet() → 生成密钥对 → 生成地址
+1. Create a wallet
+   Wallet() → generate a key pair → derive an address
 
-2. 获得比特币
-   接收转账 → 新的 UTXO 被创建 → 加入 UTXO 集合
+2. Receive Bitcoin
+   Receive a transfer → create a new UTXO → add it to the UTXO set
 
-3. 发起转账
-   选择 UTXO → 构建交易 → 签名交易 → 广播到网络
+3. Initiate a transfer
+   Select UTXOs → build a transaction → sign the transaction → broadcast it to the network
 
-4. 交易确认
-   矿工打包交易 → 工作量证明 → 添加到区块链
+4. Confirm the transaction
+   Miner includes the transaction → performs proof of work → adds the block to the blockchain
 
-5. 更新状态
-   旧 UTXO 标记为已花费 → 新 UTXO 加入集合
+5. Update state
+   Mark old UTXOs as spent → add new UTXOs to the set
 ```
 
-## 小结
+## Summary
 
-本文实现了比特币系统的基础层，包括：
+This article implemented the foundational layer of the simplified Bitcoin system, including:
 
-**核心组件：**
-- ✅ **密钥对与签名**：ECDSA 椭圆曲线密码学
-- ✅ **地址生成**：公钥 → SHA-256 → RIPEMD-160 → Base58
-- ✅ **UTXO 模型**：未花费交易输出的独特记账方式
-- ✅ **交易结构**：输入（引用 UTXO + 签名）+ 输出（金额 + 地址）
-- ✅ **UTXO 集合**：高效管理所有有效的未花费输出
-- ✅ **钱包**：密钥管理、地址生成、交易签名
+**Core components:**
+- ✅ **Key pairs and signatures**: ECDSA elliptic-curve cryptography
+- ✅ **Address generation**: Public key → SHA-256 → RIPEMD-160 → Base58
+- ✅ **UTXO model**: An accounting model based on unspent transaction outputs
+- ✅ **Transaction structure**: Inputs (UTXO references + signatures) and outputs (amounts + addresses)
+- ✅ **UTXO set**: Efficient management of currently spendable outputs
+- ✅ **Wallet**: Key management, address derivation, and transaction signing
 
-**已具备的能力：**
-创建钱包 → 生成地址 → 构建交易 → 签名验证
+**Current capabilities:**
+Create a wallet → derive an address → build a transaction → sign and verify it
 
-**下一步：**
-在 Part 2 中，我们将实现区块链、工作量证明（挖矿）和共识机制。
+**Next step:**
+Part 2 will implement the blockchain, proof of work (mining), and the basic consensus mechanism.
 
-比特币的设计优雅地融合了密码学、数据结构和经济激励，创造出去中心化的电子现金系统。通过动手实现，我们不仅理解了原理，也体会到了设计的精妙。
-
+Bitcoin's design combines cryptography, data structures, and economic incentives to create a decentralized electronic cash system. Implementing a simplified version helps us understand both the underlying principles and the elegance of the design.
 
