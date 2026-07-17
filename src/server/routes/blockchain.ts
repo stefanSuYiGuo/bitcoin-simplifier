@@ -6,7 +6,7 @@ const state = ServerState.getInstance()
 
 /**
  * GET /api/blockchain
- * 获取完整区块链
+ * Get the complete blockchain.
  */
 router.get('/blockchain', (req: Request, res: Response) => {
   try {
@@ -28,7 +28,7 @@ router.get('/blockchain', (req: Request, res: Response) => {
 
 /**
  * GET /api/blockchain/stats
- * 获取区块链统计信息
+ * Get blockchain statistics.
  */
 router.get('/blockchain/stats', (req: Request, res: Response) => {
   try {
@@ -47,7 +47,7 @@ router.get('/blockchain/stats', (req: Request, res: Response) => {
 
 /**
  * GET /api/blockchain/blocks/:index
- * 获取指定区块
+ * Get a block by index.
  */
 router.get('/blockchain/blocks/:index', (req: Request, res: Response) => {
   try {
@@ -55,7 +55,7 @@ router.get('/blockchain/blocks/:index', (req: Request, res: Response) => {
     if (isNaN(index)) {
       return res.status(400).json({
         success: false,
-        error: '无效的区块索引',
+        error: 'Invalid block index',
       })
     }
 
@@ -63,7 +63,7 @@ router.get('/blockchain/blocks/:index', (req: Request, res: Response) => {
     if (!block) {
       return res.status(404).json({
         success: false,
-        error: '区块不存在',
+        error: 'Block not found',
       })
     }
 
@@ -81,7 +81,7 @@ router.get('/blockchain/blocks/:index', (req: Request, res: Response) => {
 
 /**
  * GET /api/blockchain/blocks/:index/transactions
- * 获取区块的所有交易
+ * Get all transactions in a block.
  */
 router.get(
   '/blockchain/blocks/:index/transactions',
@@ -91,7 +91,7 @@ router.get(
       if (isNaN(index)) {
         return res.status(400).json({
           success: false,
-          error: '无效的区块索引',
+          error: 'Invalid block index',
         })
       }
 
@@ -99,7 +99,7 @@ router.get(
       if (!block) {
         return res.status(404).json({
           success: false,
-          error: '区块不存在',
+          error: 'Block not found',
         })
       }
 
@@ -122,7 +122,7 @@ router.get(
 
 /**
  * GET /api/blockchain/validate
- * 验证整个区块链
+ * Validate the entire blockchain.
  */
 router.get('/blockchain/validate', (req: Request, res: Response) => {
   try {
