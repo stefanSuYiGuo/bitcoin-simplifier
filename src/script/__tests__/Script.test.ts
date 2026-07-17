@@ -3,7 +3,7 @@ import {Signature} from '../../crypto/signature'
 import {Hash} from '../../crypto'
 
 describe('Stack', () => {
-  test('基本压栈和弹栈操作', () => {
+  test('pushes and pops stack items', () => {
     const stack = new Stack()
     stack.push('01')
     stack.push('02')
@@ -16,7 +16,7 @@ describe('Stack', () => {
     expect(stack.isEmpty()).toBe(true)
   })
 
-  test('dup 复制栈顶', () => {
+  test('dup duplicates the top item', () => {
     const stack = new Stack()
     stack.push('abc')
     stack.dup()
@@ -26,7 +26,7 @@ describe('Stack', () => {
     expect(stack.pop()).toBe('abc')
   })
 
-  test('swap 交换栈顶两个元素', () => {
+  test('swap exchanges the top two items', () => {
     const stack = new Stack()
     stack.push('01')
     stack.push('02')
@@ -36,7 +36,7 @@ describe('Stack', () => {
     expect(stack.pop()).toBe('02')
   })
 
-  test('rot 旋转栈顶三个元素', () => {
+  test('rot rotates the top three items', () => {
     const stack = new Stack()
     stack.push('01')
     stack.push('02')
@@ -48,18 +48,18 @@ describe('Stack', () => {
     expect(stack.pop()).toBe('02')
   })
 
-  test('栈溢出检测', () => {
+  test('detects stack overflow', () => {
     const stack = new Stack(3)
     stack.push('01')
     stack.push('02')
     stack.push('03')
 
-    expect(() => stack.push('04')).toThrow('栈溢出')
+    expect(() => stack.push('04')).toThrow('Stack overflow')
   })
 })
 
 describe('StackUtils', () => {
-  test('数值编码解码', () => {
+  test('encodes and decodes numbers', () => {
     expect(StackUtils.decodeNumber(StackUtils.encodeNumber(0))).toBe(0)
     expect(StackUtils.decodeNumber(StackUtils.encodeNumber(1))).toBe(1)
     expect(StackUtils.decodeNumber(StackUtils.encodeNumber(127))).toBe(127)
@@ -69,18 +69,18 @@ describe('StackUtils', () => {
     expect(StackUtils.decodeNumber(StackUtils.encodeNumber(-127))).toBe(-127)
   })
 
-  test('布尔值判断', () => {
+  test('evaluates boolean values', () => {
     expect(StackUtils.isTrue('')).toBe(false)
     expect(StackUtils.isTrue('00')).toBe(false)
     expect(StackUtils.isTrue('0000')).toBe(false)
     expect(StackUtils.isTrue('01')).toBe(true)
     expect(StackUtils.isTrue('ff')).toBe(true)
-    expect(StackUtils.isTrue('80')).toBe(false) // 负零
+    expect(StackUtils.isTrue('80')).toBe(false) // Negative zero
   })
 })
 
 describe('OpCode', () => {
-  test('数字操作码', () => {
+  test('executes numeric opcodes', () => {
     const script = new Script()
       .addOpCode(OpCode.OP_1)
       .addOpCode(OpCode.OP_2)
@@ -127,12 +127,12 @@ describe('OpCode', () => {
     const result = script.execute()
 
     expect(result.success).toBe(true)
-    // 验证 HASH160 = RIPEMD160(SHA256(data))
+    // Verify HASH160 = RIPEMD160(SHA256(data))
     const expected = Hash.ripemd160(Hash.sha256(data))
     expect(result.stack[0]).toBe(expected)
   })
 
-  test('OP_VERIFY 成功', () => {
+  test('OP_VERIFY succeeds for a true value', () => {
     const script = new Script()
       .addOpCode(OpCode.OP_1)
       .addOpCode(OpCode.OP_VERIFY)
@@ -143,7 +143,7 @@ describe('OpCode', () => {
     expect(result.success).toBe(true)
   })
 
-  test('OP_VERIFY 失败', () => {
+  test('OP_VERIFY fails for a false value', () => {
     const script = new Script()
       .addOpCode(OpCode.OP_0)
       .addOpCode(OpCode.OP_VERIFY)
@@ -154,7 +154,7 @@ describe('OpCode', () => {
     expect(result.error).toContain('OP_VERIFY')
   })
 
-  test('算术运算', () => {
+  test('executes arithmetic operations', () => {
     // 5 + 3 = 8
     const script1 = new Script()
       .addOpCode(OpCode.OP_5)
@@ -189,8 +189,8 @@ describe('OpCode', () => {
   })
 })
 
-describe('Script 序列化', () => {
-  test('toHex 和 fromHex', () => {
+describe('Script serialization', () => {
+  test('round-trips through toHex and fromHex', () => {
     const script = new Script()
       .addOpCode(OpCode.OP_DUP)
       .addOpCode(OpCode.OP_HASH160)
@@ -222,7 +222,7 @@ describe('Script 序列化', () => {
 })
 
 describe('ScriptBuilder', () => {
-  test('构建 P2PKH 锁定脚本', () => {
+  test('builds a P2PKH locking script', () => {
     const pubKeyHash = '89abcdefabbaabbaabbaabbaabbaabbaabbaabba'
     const script = ScriptBuilder.buildP2PKHLockingScript(pubKeyHash)
 
@@ -231,7 +231,7 @@ describe('ScriptBuilder', () => {
     expect(ScriptBuilder.extractP2PKHPubKeyHash(script)).toBe(pubKeyHash)
   })
 
-  test('构建 P2SH 锁定脚本', () => {
+  test('builds a P2SH locking script', () => {
     const scriptHash = '89abcdefabbaabbaabbaabbaabbaabbaabbaabba'
     const script = ScriptBuilder.buildP2SHLockingScript(scriptHash)
 
@@ -240,7 +240,7 @@ describe('ScriptBuilder', () => {
     expect(ScriptBuilder.extractP2SHScriptHash(script)).toBe(scriptHash)
   })
 
-  test('构建多签脚本', () => {
+  test('builds a multisignature script', () => {
     const pubKey1 =
       '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
     const pubKey2 =
@@ -258,7 +258,7 @@ describe('ScriptBuilder', () => {
     expect(ScriptBuilder.getScriptType(script)).toBe('MultiSig')
   })
 
-  test('构建 P2SH 多签', () => {
+  test('builds a P2SH multisignature script', () => {
     const pubKey1 =
       '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
     const pubKey2 =
@@ -273,7 +273,7 @@ describe('ScriptBuilder', () => {
     expect(ScriptBuilder.isMultiSig(redeemScript)).toBe(true)
   })
 
-  test('构建 OP_RETURN 脚本', () => {
+  test('builds an OP_RETURN script', () => {
     const data = Buffer.from('Hello Bitcoin!').toString('hex')
     const script = ScriptBuilder.buildOpReturnScript(data)
 
@@ -282,26 +282,26 @@ describe('ScriptBuilder', () => {
   })
 })
 
-describe('P2PKH 完整验证', () => {
-  test('签名验证', () => {
-    // 生成密钥对
+describe('P2PKH verification', () => {
+  test('verifies a signature', () => {
+    // Generate a key pair
     const {privateKey, publicKey} = Signature.generateKeyPair()
     const pubKeyHash = ScriptBuilder.hash160(publicKey)
 
-    // 构建锁定脚本
+    // Build the locking script
     const scriptPubKey = ScriptBuilder.buildP2PKHLockingScript(pubKeyHash)
 
-    // 模拟交易签名
+    // Simulate a transaction signature
     const txHash = Hash.sha256('test transaction data')
     const signature = Signature.sign(txHash, privateKey)
 
-    // 构建解锁脚本
+    // Build the unlocking script
     const scriptSig = ScriptBuilder.buildP2PKHUnlockingScript(
       signature,
       publicKey
     )
 
-    // 验证脚本
+    // Verify the script
     const result = Script.verify(scriptSig, scriptPubKey, {
       signatureHash: txHash,
     })
@@ -309,7 +309,7 @@ describe('P2PKH 完整验证', () => {
     expect(result.success).toBe(true)
   })
 
-  test('错误的签名应该失败', () => {
+  test('rejects an incorrect signature', () => {
     const {publicKey} = Signature.generateKeyPair()
     const {privateKey: wrongPrivateKey} = Signature.generateKeyPair()
     const pubKeyHash = ScriptBuilder.hash160(publicKey)
@@ -328,11 +328,11 @@ describe('P2PKH 完整验证', () => {
       signatureHash: txHash,
     })
 
-    // 签名验证会失败，因为用了错误的私钥
+    // Verification fails because the signature uses the wrong private key
     expect(result.success).toBe(false)
   })
 
-  test('错误的公钥哈希应该失败', () => {
+  test('rejects an incorrect public key hash', () => {
     const {privateKey, publicKey} = Signature.generateKeyPair()
     const wrongPubKeyHash = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
@@ -350,35 +350,35 @@ describe('P2PKH 完整验证', () => {
       signatureHash: txHash,
     })
 
-    // 公钥哈希不匹配
+    // The public key hash does not match
     expect(result.success).toBe(false)
   })
 })
 
-describe('多重签名验证', () => {
-  test('2-of-3 多签验证成功', () => {
-    // 生成 3 个密钥对
+describe('multisignature verification', () => {
+  test('verifies a 2-of-3 multisignature', () => {
+    // Generate three key pairs
     const keys = [
       Signature.generateKeyPair(),
       Signature.generateKeyPair(),
       Signature.generateKeyPair(),
     ]
 
-    // 构建 2-of-3 多签脚本
+    // Build a 2-of-3 multisignature script
     const redeemScript = ScriptBuilder.buildMultiSigScript(
       2,
       keys.map((k) => k.publicKey)
     )
 
-    // 模拟交易签名（使用前两个密钥签名）
+    // Simulate transaction signatures using the first two keys
     const txHash = Hash.sha256('test multisig transaction')
     const sig1 = Signature.sign(txHash, keys[0].privateKey)
     const sig2 = Signature.sign(txHash, keys[1].privateKey)
 
-    // 构建解锁脚本
+    // Build the unlocking script
     const scriptSig = ScriptBuilder.buildMultiSigUnlockingScript([sig1, sig2])
 
-    // 验证
+    // Verify
     const result = Script.verify(scriptSig, redeemScript, {
       signatureHash: txHash,
     })
@@ -386,7 +386,7 @@ describe('多重签名验证', () => {
     expect(result.success).toBe(true)
   })
 
-  test('签名不足应该失败', () => {
+  test('rejects an insufficient number of signatures', () => {
     const keys = [
       Signature.generateKeyPair(),
       Signature.generateKeyPair(),
@@ -399,7 +399,7 @@ describe('多重签名验证', () => {
     )
 
     const txHash = Hash.sha256('test multisig transaction')
-    // 只提供一个签名（需要 2 个）
+    // Provide only one signature when two are required
     const sig1 = Signature.sign(txHash, keys[0].privateKey)
 
     const scriptSig = ScriptBuilder.buildMultiSigUnlockingScript([sig1])
