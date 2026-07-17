@@ -6,7 +6,7 @@ const state = ServerState.getInstance()
 
 /**
  * POST /api/mine
- * 挖矿
+ * Mine a block.
  * Body: { minerAddress: string, transactionIds?: string[] }
  */
 router.post('/mine', (req: Request, res: Response) => {
@@ -16,7 +16,7 @@ router.post('/mine', (req: Request, res: Response) => {
     if (!minerAddress) {
       return res.status(400).json({
         success: false,
-        error: '缺少矿工地址',
+        error: 'Miner address is required',
       })
     }
     
@@ -24,7 +24,7 @@ router.post('/mine', (req: Request, res: Response) => {
     if (!miner) {
       return res.status(404).json({
         success: false,
-        error: '矿工不存在',
+        error: 'Miner not found',
       })
     }
     
@@ -33,7 +33,7 @@ router.post('/mine', (req: Request, res: Response) => {
     let block
     let miningResult
     
-    // 如果指定了交易 ID，则只挖这些交易
+    // Mine only the specified transaction IDs when provided
     if (transactionIds && transactionIds.length > 0) {
       const transactions = transactionIds
         .map((id: string) => state.pendingTransactions.find((tx) => tx.id === id))
@@ -42,7 +42,7 @@ router.post('/mine', (req: Request, res: Response) => {
       if (transactions.length === 0) {
         return res.status(400).json({
           success: false,
-          error: '未找到指定的待处理交易',
+          error: 'No matching pending transactions found',
         })
       }
       
@@ -50,16 +50,16 @@ router.post('/mine', (req: Request, res: Response) => {
       block = result.block
       miningResult = result.miningResult
       
-      // 从待处理池中移除已挖矿的交易
+      // Remove mined transactions from the pending pool
       state.pendingTransactions = state.pendingTransactions.filter(
         (tx) => !transactionIds.includes(tx.id)
       )
     } else {
-      // 挖所有待处理交易
+      // Mine all pending transactions
       const transactions = [...state.pendingTransactions]
       
       if (transactions.length === 0) {
-        // 没有待处理交易，挖空块
+        // Mine an empty block when there are no pending transactions
         const result = miner.mineEmptyBlock()
         block = result.block
         miningResult = result.miningResult
@@ -68,18 +68,18 @@ router.post('/mine', (req: Request, res: Response) => {
         block = result.block
         miningResult = result.miningResult
         
-        // 清空待处理交易池
+        // Clear the pending transaction pool
         state.clearPendingTransactions()
       }
     }
     
-    // 将区块添加到区块链
+    // Add the block to the blockchain
     const success = state.blockchain.addBlock(block)
     
     if (!success) {
       return res.status(500).json({
         success: false,
-        error: '区块添加失败',
+        error: 'Failed to add block',
       })
     }
     
@@ -94,7 +94,7 @@ router.post('/mine', (req: Request, res: Response) => {
           duration: miningResult.duration,
           totalTime,
         },
-        message: '挖矿成功',
+        message: 'Block mined successfully',
       },
     })
   } catch (error: any) {
@@ -107,7 +107,7 @@ router.post('/mine', (req: Request, res: Response) => {
 
 /**
  * GET /api/mine/difficulty
- * 获取当前挖矿难度
+ * Get the current mining difficulty.
  */
 router.get('/mine/difficulty', (req: Request, res: Response) => {
   try {
