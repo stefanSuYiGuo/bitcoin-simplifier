@@ -3,24 +3,24 @@ import {MerkleTree} from '../merkle'
 import {Hash} from '../crypto'
 
 /**
- * 区块类
- * 包含区块头和交易列表
+ * Block representation.
+ * Contains the block header and transaction list.
  */
 export class Block {
-  // 区块索引（高度）
+  // Block index (height)
   public index: number
 
-  // 区块头
-  public previousHash: string // 前一个区块的哈希
-  public timestamp: number // 区块创建时间
-  public merkleRoot: string // 交易 Merkle 根
-  public difficulty: number // 挖矿难度
-  public nonce: number // 工作量证明的随机数
+  // Block header
+  public previousHash: string // Previous block hash
+  public timestamp: number // Block creation time
+  public merkleRoot: string // Transaction Merkle root
+  public difficulty: number // Mining difficulty
+  public nonce: number // Proof-of-work nonce
 
-  // 区块体
+  // Block body
   public transactions: Transaction[]
 
-  // 区块哈希（缓存）
+  // Cached block hash
   private _hash?: string
 
   constructor(
@@ -32,7 +32,7 @@ export class Block {
     nonce: number = 0
   ) {
     if (transactions.length === 0) {
-      throw new Error('区块至少需要一笔交易（Coinbase 交易）')
+      throw new Error('A block must contain at least one transaction (the coinbase transaction)')
     }
 
     this.index = index
@@ -42,12 +42,12 @@ export class Block {
     this.difficulty = difficulty
     this.nonce = nonce
 
-    // 计算 Merkle 根
+    // Calculate the Merkle root
     this.merkleRoot = this.calculateMerkleRoot()
   }
 
   /**
-   * 计算 Merkle 根
+   * Calculate the Merkle root.
    */
   private calculateMerkleRoot(): string {
     const txIds = this.transactions.map((tx) => tx.id)
@@ -56,7 +56,7 @@ export class Block {
   }
 
   /**
-   * 计算区块哈希
+   * Calculate the block hash.
    */
   calculateHash(): string {
     const blockHeader = this.getHeaderString()
@@ -64,7 +64,7 @@ export class Block {
   }
 
   /**
-   * 获取区块头字符串
+   * Get the serialized block header.
    */
   private getHeaderString(): string {
     return JSON.stringify({
@@ -78,7 +78,7 @@ export class Block {
   }
 
   /**
-   * 获取区块哈希（缓存）
+   * Get the cached block hash.
    */
   get hash(): string {
     if (!this._hash) {
@@ -88,15 +88,15 @@ export class Block {
   }
 
   /**
-   * 设置 nonce（挖矿时使用）
+   * Set the nonce during mining.
    */
   setNonce(nonce: number): void {
     this.nonce = nonce
-    this._hash = undefined // 清除缓存
+    this._hash = undefined // Clear the cache
   }
 
   /**
-   * 验证区块哈希是否满足难度要求
+   * Check whether the block hash meets the difficulty target.
    */
   hasValidHash(): boolean {
     const prefix = '0'.repeat(this.difficulty)
@@ -104,20 +104,20 @@ export class Block {
   }
 
   /**
-   * 创建创世区块
+   * Create the genesis block.
    */
   static createGenesisBlock(coinbaseTx: Transaction): Block {
     return new Block(
-      0, // 索引
-      '0', // 前区块哈希（创世区块没有前区块）
+      0, // Index
+      '0', // The genesis block has no previous block
       Date.now(),
       [coinbaseTx],
-      1 // 初始难度
+      1 // Initial difficulty
     )
   }
 
   /**
-   * 获取区块大小（字节）
+   * Get the block size in bytes.
    */
   getSize(): number {
     const blockData = {
@@ -135,14 +135,14 @@ export class Block {
   }
 
   /**
-   * 获取区块中的 Coinbase 交易
+   * Get the coinbase transaction from the block.
    */
   getCoinbaseTransaction(): Transaction | null {
     return this.transactions.find((tx) => tx.isCoinbase()) || null
   }
 
   /**
-   * 获取区块总手续费
+   * Calculate the block's total transaction fees.
    */
   getTotalFees(utxoSet: Map<string, TxOutput>): number {
     let totalFees = 0
@@ -155,7 +155,7 @@ export class Block {
       try {
         totalFees += tx.calculateFee(utxoSet)
       } catch (error) {
-        // UTXO 不存在，跳过
+        // Skip inputs that reference a missing UTXO
       }
     }
 
@@ -163,7 +163,7 @@ export class Block {
   }
 
   /**
-   * 序列化为 JSON
+   * Serialize the block to JSON.
    */
   toJSON(): object {
     return {
@@ -181,7 +181,7 @@ export class Block {
   }
 
   /**
-   * 从 JSON 反序列化
+   * Deserialize a block from JSON.
    */
   static fromJSON(data: any): Block {
     const transactions = data.transactions.map((txData: any) =>
@@ -201,7 +201,7 @@ export class Block {
   }
 
   /**
-   * 克隆区块
+   * Clone the block.
    */
   clone(): Block {
     const transactions = this.transactions.map((tx) => tx.clone())
@@ -216,7 +216,7 @@ export class Block {
   }
 
   /**
-   * 转换为字符串（用于调试）
+   * Convert the block to a debug string.
    */
   toString(): string {
     return `Block #${this.index} [${this.hash.substring(0, 10)}...] - ${
