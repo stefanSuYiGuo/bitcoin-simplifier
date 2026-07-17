@@ -1,25 +1,25 @@
 /**
- * 比特币系统演示
- * 展示从创世区块到多笔交易的完整流程
+ * Bitcoin system demonstration.
+ * Shows the complete flow from the genesis block through multiple transactions.
  */
 
 import { Wallet } from '../wallet'
 import { Transaction, TransactionBuilder } from '../transaction'
 import { Block, Blockchain, Miner, ProofOfWork } from '../blockchain'
 
-// 辅助函数：打印分隔线
+// Helper: print a section divider
 function printSeparator(title: string) {
   console.log('\n' + '='.repeat(60))
   console.log(`  ${title}`)
   console.log('='.repeat(60))
 }
 
-// 辅助函数：打印余额
+// Helper: print wallet balances
 function printBalances(
   blockchain: Blockchain,
   wallets: { name: string; wallet: Wallet }[]
 ) {
-  console.log('\n当前余额：')
+  console.log('\nCurrent balances:')
   const utxoSet = blockchain.getUTXOSet()
   for (const { name, wallet } of wallets) {
     const balance = utxoSet.getBalance(wallet.address)
@@ -27,25 +27,25 @@ function printBalances(
   }
 }
 
-// 主演示函数
+// Main demonstration
 async function demo() {
-  printSeparator('比特币系统演示')
+  printSeparator('Bitcoin System Demonstration')
 
-  // 1. 创建区块链
-  console.log('\n步骤 1: 初始化区块链')
+  // 1. Create the blockchain
+  console.log('\nStep 1: Initialize the blockchain')
   const blockchain = new Blockchain({
     initialDifficulty: 2,
     blockReward: 50,
     targetBlockTime: 10,
     difficultyAdjustmentInterval: 10,
   })
-  console.log('  ✓ 区块链配置完成')
-  console.log(`    - 初始难度: 2`)
-  console.log(`    - 区块奖励: 50 BTC`)
-  console.log(`    - 目标出块时间: 10 秒`)
+  console.log('  ✓ Blockchain configured')
+  console.log(`    - Initial difficulty: 2`)
+  console.log(`    - Block reward: 50 BTC`)
+  console.log(`    - Target block time: 10 seconds`)
 
-  // 2. 创建钱包
-  console.log('\n步骤 2: 创建钱包')
+  // 2. Create wallets
+  console.log('\nStep 2: Create wallets')
   const minerWallet = new Wallet()
   const alice = new Wallet()
   const bob = new Wallet()
@@ -58,45 +58,45 @@ async function demo() {
     { name: 'Charlie', wallet: charlie },
   ]
 
-  console.log('  ✓ 已创建 4 个钱包')
+  console.log('  ✓ Created 4 wallets')
   for (const { name, wallet } of wallets) {
     console.log(`    - ${name}: ${wallet.address.substring(0, 20)}...`)
   }
 
-  // 3. 创建创世区块
-  console.log('\n步骤 3: 创建创世区块')
+  // 3. Create the genesis block
+  console.log('\nStep 3: Create the genesis block')
   const genesisCoinbase = Transaction.createCoinbase(minerWallet.address, 50, 0)
   const genesisBlock = Block.createGenesisBlock(genesisCoinbase)
   blockchain.initializeWithGenesisBlock(genesisBlock)
 
-  console.log('  ✓ 创世区块已创建')
-  console.log(`    - 区块哈希: ${genesisBlock.hash.substring(0, 20)}...`)
-  console.log(`    - Merkle 根: ${genesisBlock.merkleRoot.substring(0, 20)}...`)
+  console.log('  ✓ Genesis block created')
+  console.log(`    - Block hash: ${genesisBlock.hash.substring(0, 20)}...`)
+  console.log(`    - Merkle root: ${genesisBlock.merkleRoot.substring(0, 20)}...`)
 
   printBalances(blockchain, wallets)
 
-  // 4. 矿工挖第一个区块
-  printSeparator('挖矿：区块 #1')
+  // 4. Mine the first block
+  printSeparator('Mining: Block #1')
 
   const miner = new Miner(minerWallet, blockchain)
-  console.log('\n正在挖矿...')
+  console.log('\nMining...')
 
   const { block: block1, miningResult: result1 } = miner.mineEmptyBlock()
 
-  console.log('  ✓ 挖矿成功！')
-  console.log(`    - 区块哈希: ${result1.hash.substring(0, 20)}...`)
+  console.log('  ✓ Block mined!')
+  console.log(`    - Block hash: ${result1.hash.substring(0, 20)}...`)
   console.log(`    - Nonce: ${result1.nonce}`)
-  console.log(`    - 尝试次数: ${result1.attempts}`)
-  console.log(`    - 用时: ${result1.duration}ms`)
-  console.log(`    - 哈希率: ${result1.hashRate} H/s`)
+  console.log(`    - Attempts: ${result1.attempts}`)
+  console.log(`    - Duration: ${result1.duration}ms`)
+  console.log(`    - Hash rate: ${result1.hashRate} H/s`)
 
   blockchain.addBlock(block1)
-  console.log('  ✓ 区块已添加到区块链')
+  console.log('  ✓ Block added to the blockchain')
 
   printBalances(blockchain, wallets)
 
-  // 5. 矿工给 Alice 和 Bob 转账
-  printSeparator('交易：矿工转账给 Alice 和 Bob')
+  // 5. Transfer funds from the miner to Alice and Bob
+  printSeparator('Transaction: Miner Pays Alice and Bob')
 
   const utxoSet1 = blockchain.getUTXOSet()
   const tx1 = new TransactionBuilder(utxoSet1)
@@ -105,27 +105,27 @@ async function demo() {
     .to(bob.address, 20)
     .buildAndSign()
 
-  console.log('\n  ✓ 交易已创建')
-  console.log(`    - 交易 ID: ${tx1.id.substring(0, 20)}...`)
-  console.log(`    - 输入: ${tx1.inputs.length} 个`)
-  console.log(`    - 输出: ${tx1.outputs.length} 个 (包含找零)`)
+  console.log('\n  ✓ Transaction created')
+  console.log(`    - Transaction ID: ${tx1.id.substring(0, 20)}...`)
+  console.log(`    - Inputs: ${tx1.inputs.length}`)
+  console.log(`    - Outputs: ${tx1.outputs.length} (including change)`)
 
-  // 6. 挖矿打包交易
-  console.log('\n正在挖矿打包交易...')
+  // 6. Mine a block containing the transaction
+  console.log('\nMining a block with the transaction...')
   const { block: block2, miningResult: result2 } = miner.mineBlock([tx1])
 
-  console.log('  ✓ 挖矿成功！')
-  console.log(`    - 区块哈希: ${result2.hash.substring(0, 20)}...`)
-  console.log(`    - 包含交易: ${block2.transactions.length} 笔`)
-  console.log(`    - 用时: ${result2.duration}ms`)
+  console.log('  ✓ Block mined!')
+  console.log(`    - Block hash: ${result2.hash.substring(0, 20)}...`)
+  console.log(`    - Transactions: ${block2.transactions.length}`)
+  console.log(`    - Duration: ${result2.duration}ms`)
 
   blockchain.addBlock(block2)
-  console.log('  ✓ 区块已添加到区块链')
+  console.log('  ✓ Block added to the blockchain')
 
   printBalances(blockchain, wallets)
 
-  // 7. Alice 给 Charlie 转账
-  printSeparator('交易：Alice 转账给 Charlie')
+  // 7. Transfer funds from Alice to Charlie
+  printSeparator('Transaction: Alice Pays Charlie')
 
   const utxoSet2 = blockchain.getUTXOSet()
   const tx2 = TransactionBuilder.createSimpleTransfer(
@@ -135,11 +135,11 @@ async function demo() {
     utxoSet2
   )
 
-  console.log('\n  ✓ 交易已创建')
-  console.log(`    - 交易 ID: ${tx2.id.substring(0, 20)}...`)
-  console.log(`    - Alice 转给 Charlie: 15 BTC`)
+  console.log('\n  ✓ Transaction created')
+  console.log(`    - Transaction ID: ${tx2.id.substring(0, 20)}...`)
+  console.log(`    - Alice pays Charlie: 15 BTC`)
 
-  // 8. Bob 也给 Charlie 转账
+  // 8. Transfer funds from Bob to Charlie
   const tx3 = TransactionBuilder.createSimpleTransfer(
     bob,
     charlie.address,
@@ -147,61 +147,61 @@ async function demo() {
     utxoSet2
   )
 
-  console.log('  ✓ 交易已创建')
-  console.log(`    - 交易 ID: ${tx3.id.substring(0, 20)}...`)
-  console.log(`    - Bob 转给 Charlie: 10 BTC`)
+  console.log('  ✓ Transaction created')
+  console.log(`    - Transaction ID: ${tx3.id.substring(0, 20)}...`)
+  console.log(`    - Bob pays Charlie: 10 BTC`)
 
-  // 9. 挖矿打包两笔交易
-  console.log('\n正在挖矿打包 2 笔交易...')
+  // 9. Mine a block containing both transactions
+  console.log('\nMining a block with 2 transactions...')
   const { block: block3, miningResult: result3 } = miner.mineBlock([tx2, tx3])
 
-  console.log('  ✓ 挖矿成功！')
-  console.log(`    - 区块哈希: ${result3.hash.substring(0, 20)}...`)
-  console.log(`    - 包含交易: ${block3.transactions.length} 笔`)
-  console.log(`    - 用时: ${result3.duration}ms`)
+  console.log('  ✓ Block mined!')
+  console.log(`    - Block hash: ${result3.hash.substring(0, 20)}...`)
+  console.log(`    - Transactions: ${block3.transactions.length}`)
+  console.log(`    - Duration: ${result3.duration}ms`)
 
   blockchain.addBlock(block3)
-  console.log('  ✓ 区块已添加到区块链')
+  console.log('  ✓ Block added to the blockchain')
 
   printBalances(blockchain, wallets)
 
-  // 10. 显示区块链状态
-  printSeparator('区块链最终状态')
+  // 10. Display the final blockchain state
+  printSeparator('Final Blockchain State')
 
   const stats = blockchain.getStats() as any
-  console.log('\n区块链统计：')
-  console.log(`  - 总区块数: ${stats.length}`)
-  console.log(`  - 当前难度: ${stats.difficulty}`)
-  console.log(`  - UTXO 数量: ${stats.utxoCount}`)
+  console.log('\nBlockchain statistics:')
+  console.log(`  - Total blocks: ${stats.length}`)
+  console.log(`  - Current difficulty: ${stats.difficulty}`)
+  console.log(`  - UTXO count: ${stats.utxoCount}`)
   console.log(
-    `  - 最新区块: #${stats.latestBlock.index} [${stats.latestBlock.hash.substring(0, 10)}...]`
+    `  - Latest block: #${stats.latestBlock.index} [${stats.latestBlock.hash.substring(0, 10)}...]`
   )
 
-  console.log('\n所有区块：')
+  console.log('\nAll blocks:')
   const chain = blockchain.getChain()
   for (const block of chain) {
     console.log(
-      `  - 区块 #${block.index}: ${block.hash.substring(0, 20)}... (${block.transactions.length} 笔交易)`
+      `  - Block #${block.index}: ${block.hash.substring(0, 20)}... (${block.transactions.length} transactions)`
     )
   }
 
   printBalances(blockchain, wallets)
 
-  // 11. 验证工作量证明
-  printSeparator('验证工作量证明')
+  // 11. Verify proof of work
+  printSeparator('Verify Proof of Work')
 
-  console.log('\n验证所有区块的 PoW：')
+  console.log('\nVerifying PoW for every block:')
   for (const block of chain) {
     const isValidPoW = ProofOfWork.verify(block)
     console.log(
-      `  - 区块 #${block.index}: ${isValidPoW ? '✓ PoW 有效' : '✗ PoW 无效'}`
+      `  - Block #${block.index}: ${isValidPoW ? '✓ Valid PoW' : '✗ Invalid PoW'}`
     )
   }
 
-  printSeparator('演示完成')
+  printSeparator('Demonstration Complete')
   console.log('\n')
 }
 
-// 运行演示
+// Run the demonstration
 demo().catch(console.error)
 
