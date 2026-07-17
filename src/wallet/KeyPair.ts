@@ -1,16 +1,16 @@
 import { Signature } from '../crypto/signature'
 
 /**
- * 密钥对管理类
- * 封装公私钥对的生成和管理
+ * Key pair manager.
+ * Encapsulates public and private key generation and access.
  */
 export class KeyPair {
   private _privateKey: string
   private _publicKey: string
 
   /**
-   * 构造函数
-   * @param privateKey 私钥（可选，不提供则生成新的）
+   * Creates a key pair.
+   * @param privateKey Optional private key; a new pair is generated when omitted
    */
   constructor(privateKey?: string) {
     if (privateKey) {
@@ -24,47 +24,48 @@ export class KeyPair {
   }
 
   /**
-   * 获取私钥
+   * Returns the private key.
    */
   get privateKey(): string {
     return this._privateKey
   }
 
   /**
-   * 获取公钥
+   * Returns the public key.
    */
   get publicKey(): string {
     return this._publicKey
   }
 
   /**
-   * 对数据进行签名
-   * @param data 要签名的数据
-   * @returns 签名字符串
+   * Signs data with the private key.
+   * @param data Data to sign
+   * @returns Signature string
    */
   sign(data: string): string {
     return Signature.sign(data, this._privateKey)
   }
 
   /**
-   * 验证签名
-   * @param data 原始数据
-   * @param signature 签名
-   * @returns 签名是否有效
+   * Verifies a signature with the public key.
+   * @param data Original data
+   * @param signature Signature to verify
+   * @returns Whether the signature is valid
    */
   verify(data: string, signature: string): boolean {
     return Signature.verify(data, signature, this._publicKey)
   }
 
   /**
-   * 验证密钥对是否有效
+   * Checks whether the key pair is valid.
    */
   isValid(): boolean {
     return Signature.verifyKeyPair(this._privateKey, this._publicKey)
   }
 
   /**
-   * 导出为 JSON 对象（注意：包含私钥，需谨慎处理）
+   * Exports the key pair as JSON-compatible data.
+   * The result contains the private key and must be handled carefully.
    */
   toJSON(): { privateKey: string; publicKey: string } {
     return {
@@ -74,7 +75,7 @@ export class KeyPair {
   }
 
   /**
-   * 从 JSON 对象导入
+   * Creates a key pair from JSON-compatible data.
    */
   static fromJSON(json: { privateKey: string; publicKey: string }): KeyPair {
     return new KeyPair(json.privateKey)
