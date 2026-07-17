@@ -1,243 +1,243 @@
-# Simple Bitcoin 可视化 Demo：产品功能介绍
+# Simple Bitcoin Visual Demo: Product Features
 
-> 一个可以"亲手操作"的区块链演示系统——打开浏览器，你就能完整体验：创建钱包、转账、挖矿、查看区块链、验证交易。
-
----
-
-## 这个 Demo 能帮你做什么？
-
-你可以把它想象成一个**本地运行的迷你区块链实验台**。
-
-通过这套系统，你可以：
-
-- **创建自己的钱包**，获得独一无二的地址和密钥
-- **挖矿赚取比特币**，亲眼看到区块奖励到账
-- **转账给其他钱包**，体验交易从创建到确认的全过程
-- **浏览整条区块链**，查看每个区块里装了什么
-- **验证交易真伪**，用 Merkle 证明亲手验证"这笔交易真的在链上"
-
-整个过程完全可视化，所有状态变化一目了然——非常适合用来演示"比特币到底是怎么工作的"。
+> A hands-on blockchain demonstration system. Open a browser to experience the complete workflow: create wallets, transfer funds, mine blocks, inspect the blockchain, and verify transactions.
 
 ---
 
-## 产品形态
+## What Can This Demo Help You Do?
 
-| 组件 | 职责 |
+Think of it as a **locally hosted miniature blockchain laboratory**.
+
+With this system, you can:
+
+- **Create your own wallets** and obtain unique addresses and keys
+- **Mine bitcoin** and observe block rewards arriving in a wallet
+- **Transfer funds to other wallets** and experience the complete transaction lifecycle from creation to confirmation
+- **Browse the entire blockchain** and inspect the contents of each block
+- **Verify transactions** with Merkle proofs to confirm that a transaction is recorded on the chain
+
+The entire process is visual, making every state change easy to observe. It is well suited to demonstrating how Bitcoin works.
+
+---
+
+## Product Architecture
+
+| Component | Responsibility |
 |------|------|
-| **前端界面** | 提供直观的操作界面：导航菜单、数据展示、表单交互、实时反馈 |
-| **后端服务** | 维护区块链状态、钱包数据、交易池，并通过 API 为前端提供能力支撑 |
+| **Frontend interface** | Provides an intuitive interface with navigation, data presentation, forms, and real-time feedback |
+| **Backend service** | Maintains blockchain state, wallet data, and the transaction pool, and exposes capabilities to the frontend through APIs |
 
-> 小贴士：这是一个演示系统，所有数据保存在内存中。重启服务后数据会清空——这反而很方便，你可以随时从"干净状态"开始新一轮演示。
+> Tip: This is a demonstration system, and all data is stored in memory. Restarting the service clears the data, allowing you to begin a new demonstration from a clean state at any time.
 
 ---
 
-## 快速启动
+## Quick Start
 
-**启动后端**
+**Start the backend**
 ```bash
 cd bitcoin
 pnpm run server
-# 服务运行在 http://localhost:3001
+# Service runs at http://localhost:3001
 ```
 
-**启动前端**
+**Start the frontend**
 ```bash
 cd bitcoin/frontend
 pnpm run dev
-# 界面运行在 http://localhost:3000
+# Interface runs at http://localhost:3000
 ```
 
-打开浏览器访问 `http://localhost:3000`，开始体验！
+Open `http://localhost:3000` in a browser to begin.
 
 ---
 
-## 功能页面详解
+## Feature Pages
 
-### 导航概览
+### Navigation Overview
 
-进入系统后，左侧导航栏清晰地列出了所有功能入口：
+After entering the system, the left navigation bar lists every feature:
 
-| 导航项 | 做什么用 |
+| Navigation item | Purpose |
 |--------|----------|
-| 区块链 | 查看链上所有区块和统计数据 |
-| 钱包 | 创建钱包、查看余额和资产明细 |
-| 创建交易 | 发起一笔转账 |
-| 挖矿 | 挖出新区块，打包待处理的交易 |
-| UTXO | 从底层视角看"钱"是怎么存的 |
-| Merkle | 验证某笔交易是否真的在某个区块里 |
+| Blockchain | View every block and blockchain statistics |
+| Wallets | Create wallets and view balances and asset details |
+| Create Transaction | Initiate a transfer |
+| Mining | Mine new blocks and package pending transactions |
+| UTXO | Examine how funds are represented at the underlying level |
+| Merkle | Verify whether a transaction is included in a block |
 
-**[截图占位：系统首页 — 左侧导航 + 整体布局]**
-
----
-
-### 区块链浏览器
-
-**一眼看清链的全貌**
-
-这是整个系统的"总览台"。你可以看到：
-
-- **统计卡片**：区块总数、UTXO 数量、当前挖矿难度、最新区块高度
-- **区块列表**：每个区块的基本信息（高度、时间、哈希、交易数量等）
-- 点击任意区块，可以进入详情页查看完整内容
-
-这个页面回答的问题是：**"这条链现在长什么样？"**
-
-**[截图占位：区块链浏览器 — 统计卡片 + 区块列表]**
+**[Screenshot placeholder: Home page — left navigation and overall layout]**
 
 ---
 
-### 区块详情
+### Blockchain Explorer
 
-**打开一个区块，看看里面装了什么**
+**See the complete chain at a glance**
 
-点击某个区块后，你会看到：
+This is the system's overview dashboard. It displays:
 
-- 区块头信息：高度、时间戳、哈希值、前一个区块的哈希、难度、Nonce
-- 区块内的所有交易：包括 Coinbase 交易（矿工奖励）和普通转账交易
+- **Statistics cards**: Total blocks, UTXO count, current mining difficulty, and latest block height
+- **Block list**: Basic information for each block, including height, time, hash, and transaction count
+- Select any block to open its detail page and inspect the complete contents
 
-这个页面回答的问题是：**"这个区块里到底有什么？"**
+This page answers the question: **"What does the chain look like now?"**
 
-**[截图占位：区块详情页 — 区块头信息 + 交易列表]**
-
----
-
-### 钱包管理
-
-**你的数字身份和资产中心**
-
-在这里你可以：
-
-- **创建新钱包**：一键生成，系统会为你创建地址、公钥、私钥
-- **查看所有钱包**：列表展示每个钱包的地址和当前余额
-- **查看钱包详情**：完整的地址、公钥，私钥（可隐藏/显示），支持一键复制
-- **查看 UTXO 明细**：这个钱包的"钱"具体来自哪些交易
-
-这个页面回答的问题是：**"我有哪些钱包？每个钱包有多少钱？钱从哪来的？"**
-
-**[截图占位：钱包列表 — 多个钱包及余额]**
-
-**[截图占位：钱包详情 — 地址/公钥/私钥展示]**
-
-**[截图占位：UTXO 明细 — 该钱包的未花费输出列表]**
+**[Screenshot placeholder: Blockchain explorer — statistics cards and block list]**
 
 ---
 
-### 创建交易
+### Block Details
 
-**发起一笔转账**
+**Open a block and inspect its contents**
 
-转账操作非常直观：
+After selecting a block, you will see:
 
-1. **选择发送方**：从你的钱包列表中选择，界面会显示可用余额
-2. **填写接收方**：输入对方地址，或者快速选择系统中的其他钱包
-3. **输入金额**：支持精确输入，也可以快速选择 25%/50%/75%/全部余额
-4. **确认创建**：点击后交易会进入"待处理池"，等待矿工打包
+- Block header information: Height, timestamp, hash, previous block hash, difficulty, and nonce
+- Every transaction in the block, including the coinbase transaction that pays the mining reward and regular transfer transactions
 
-> 注意：交易创建后并不会立即生效！它需要被矿工挖矿打包进区块才算真正确认。
+This page answers the question: **"What exactly is in this block?"**
 
-这个页面回答的问题是：**"怎么把钱转给别人？"**
-
-**[截图占位：创建交易表单 — 选择发送方、接收方、金额]**
-
-**[截图占位：交易创建成功提示]**
+**[Screenshot placeholder: Block details — block header information and transaction list]**
 
 ---
 
-### 挖矿面板
+### Wallet Management
 
-**挖出新区块，让交易上链**
+**Your digital identity and asset center**
 
-这是整个演示中最有"仪式感"的环节：
+Here you can:
 
-1. **选择矿工**：指定哪个钱包来接收区块奖励（50 BTC）
-2. **查看难度**：当前难度和下一个区块的预期难度
-3. **查看待处理交易**：所有等待被打包的交易都在这里
-4. **选择要打包的交易**：可以勾选特定交易，也可以全选
-5. **开始挖矿**：点击后系统会执行工作量证明，找到合适的 Nonce
-6. **查看结果**：挖矿成功后显示区块哈希、尝试次数、耗时等详情
+- **Create a new wallet**: Generate an address, public key, and private key with one action
+- **View all wallets**: See each wallet's address and current balance in a list
+- **View wallet details**: See the complete address, public key, and private key, hide or reveal the private key, and copy values with one action
+- **View UTXO details**: See the transactions from which the wallet's funds originated
 
-挖矿成功后，你可以去"区块链"页面看到新区块，去"钱包"页面看到余额变化。
+This page answers the questions: **"Which wallets do I have? How much does each contain? Where did the funds come from?"**
 
-这个页面回答的问题是：**"交易怎么才能被确认？矿工是怎么工作的？"**
+**[Screenshot placeholder: Wallet list — multiple wallets and balances]**
 
-**[截图占位：挖矿面板 — 矿工选择 + 难度信息]**
+**[Screenshot placeholder: Wallet details — address, public key, and private key]**
 
-**[截图占位：待处理交易列表 — 勾选要打包的交易]**
-
-**[截图占位：挖矿成功结果 — 区块哈希、Nonce、尝试次数、耗时]**
+**[Screenshot placeholder: UTXO details — unspent outputs for the wallet]**
 
 ---
 
-### UTXO 浏览器
+### Create Transaction
 
-**从底层视角理解"余额"**
+**Initiate a transfer**
 
-比特币没有"账户余额"的概念，只有"未花费的交易输出"（UTXO）。这个页面让你直观看到：
+The transfer workflow is straightforward:
 
-- **全局 UTXO 列表**：系统中所有可以被花费的"钱"
-- **每条 UTXO 的信息**：来自哪笔交易、输出索引、金额、属于谁
-- **按地址筛选**：只看某个钱包的 UTXO
+1. **Select the sender**: Choose from your wallet list; the interface displays the available balance
+2. **Enter the recipient**: Enter an address or quickly select another wallet in the system
+3. **Enter the amount**: Enter an exact amount or quickly select 25%, 50%, 75%, or the entire balance
+4. **Confirm creation**: The transaction enters the pending pool and waits for a miner to package it
 
-当你转账或挖矿后，回来刷新这个页面，就能看到 UTXO 是如何被消费和创建的。
+> Note: A transaction does not take effect immediately after creation. It is confirmed only after a miner includes it in a mined block.
 
-这个页面回答的问题是：**"比特币的'钱'到底是怎么存储的？"**
+This page answers the question: **"How do I transfer funds to someone else?"**
 
-**[截图占位：UTXO 浏览器 — 全局 UTXO 列表]**
+**[Screenshot placeholder: Transaction form — sender, recipient, and amount]**
 
-**[截图占位：按地址筛选后的 UTXO]**
-
----
-
-### Merkle 验证器
-
-**亲手验证"交易是否真的在链上"**
-
-Merkle 树是比特币用来高效验证交易的数据结构。这个页面让你体验验证过程：
-
-1. **选择一个区块**
-2. **选择区块中的某笔交易**
-3. **发起验证**：系统会生成 Merkle 证明并验证
-4. **查看结果**：验证成功/失败，以及完整的 Merkle 路径
-
-这个功能演示了一个重要概念：**不需要下载整个区块链，也能验证某笔交易是否存在**（这就是 SPV 轻客户端的原理）。
-
-这个页面回答的问题是：**"怎么证明一笔交易真的被记录在区块里？"**
-
-**[截图占位：Merkle 验证器 — 选择区块和交易]**
-
-**[截图占位：验证结果 — 成功/失败状态]**
-
-**[截图占位：Merkle 路径展示（如有）]**
+**[Screenshot placeholder: Successful transaction creation message]**
 
 ---
 
-## 推荐演示流程
+### Mining Panel
 
-如果你要录制演示视频或截图讲解，建议按这个顺序操作：
+**Mine a new block and record transactions on the chain**
 
-| 步骤 | 操作 | 截图重点 |
+This is the most distinctive stage of the demonstration:
+
+1. **Select the miner**: Specify the wallet that will receive the 50 BTC block reward
+2. **View difficulty**: See the current difficulty and the expected difficulty of the next block
+3. **View pending transactions**: See every transaction waiting to be packaged
+4. **Select transactions to package**: Select specific transactions or select all of them
+5. **Start mining**: The system performs proof of work and finds a suitable nonce
+6. **View the result**: After successful mining, see the block hash, attempt count, duration, and other details
+
+After mining succeeds, open the Blockchain page to see the new block and the Wallets page to see balance changes.
+
+This page answers the questions: **"How is a transaction confirmed? How does a miner work?"**
+
+**[Screenshot placeholder: Mining panel — miner selection and difficulty information]**
+
+**[Screenshot placeholder: Pending transaction list — select transactions to package]**
+
+**[Screenshot placeholder: Mining result — block hash, nonce, attempt count, and duration]**
+
+---
+
+### UTXO Explorer
+
+**Understand balances from the underlying model**
+
+Bitcoin does not use account balances; it uses unspent transaction outputs (UTXOs). This page displays:
+
+- **Global UTXO list**: Every spendable output in the system
+- **Information for each UTXO**: Source transaction, output index, amount, and owner
+- **Address filtering**: Display only the UTXOs associated with a particular wallet
+
+After transferring funds or mining, refresh this page to observe how UTXOs are consumed and created.
+
+This page answers the question: **"How are funds represented in Bitcoin?"**
+
+**[Screenshot placeholder: UTXO explorer — global UTXO list]**
+
+**[Screenshot placeholder: UTXOs filtered by address]**
+
+---
+
+### Merkle Verifier
+
+**Verify that a transaction is recorded on the chain**
+
+A Merkle tree is the data structure Bitcoin uses for efficient transaction verification. This page demonstrates the verification process:
+
+1. **Select a block**
+2. **Select a transaction in the block**
+3. **Start verification**: The system generates and verifies a Merkle proof
+4. **View the result**: See whether verification succeeded and inspect the complete Merkle path
+
+This feature demonstrates an important concept: **a transaction can be verified without downloading the entire blockchain**, which is the principle behind SPV lightweight clients.
+
+This page answers the question: **"How can I prove that a transaction was recorded in a block?"**
+
+**[Screenshot placeholder: Merkle verifier — block and transaction selection]**
+
+**[Screenshot placeholder: Verification result — success or failure status]**
+
+**[Screenshot placeholder: Merkle path, when available]**
+
+---
+
+## Recommended Demonstration Workflow
+
+If you are recording a demonstration video or preparing annotated screenshots, use the following sequence:
+
+| Step | Action | Screenshot focus |
 |------|------|----------|
-| 1 | 打开钱包页，创建 2 个新钱包 | 钱包列表、新钱包的地址 |
-| 2 | 打开挖矿页，选一个钱包当矿工，挖一个区块 | 挖矿成功结果、矿工获得 50 BTC |
-| 3 | 打开交易页，从矿工钱包转 20 BTC 给另一个钱包 | 交易创建成功提示 |
-| 4 | 回到挖矿页，把刚创建的交易打包进新区块 | 待处理交易被选中、挖矿成功 |
-| 5 | 打开区块链页，查看新产生的区块 | 区块列表多了一个、区块详情里有刚才的交易 |
-| 6 | 打开钱包页，查看双方余额变化 | 转出方余额减少、接收方余额增加 |
-| 7 | 打开 UTXO 页，观察 UTXO 的变化 | 旧 UTXO 消失、新 UTXO 出现 |
-| 8 | 打开 Merkle 页，验证刚才的交易 | 验证成功、Merkle 路径 |
+| 1 | Open the Wallets page and create two new wallets | Wallet list and new wallet addresses |
+| 2 | Open the Mining page, select one wallet as the miner, and mine a block | Successful mining result and the miner receiving 50 BTC |
+| 3 | Open the transaction page and send 20 BTC from the miner wallet to the other wallet | Successful transaction creation message |
+| 4 | Return to the Mining page and package the new transaction in a block | Pending transaction selected and successful mining |
+| 5 | Open the Blockchain page and inspect the new block | Additional block in the list and the transaction in its details |
+| 6 | Open the Wallets page and inspect both balance changes | Sender balance decreases and recipient balance increases |
+| 7 | Open the UTXO page and observe the UTXO changes | Old UTXO disappears and new UTXOs appear |
+| 8 | Open the Merkle page and verify the transaction | Successful verification and Merkle path |
 
 ---
 
-## 小结
+## Summary
 
-这个 Demo 把比特币的核心概念——**钱包、交易、挖矿、区块链、UTXO、Merkle 证明**——串成了一条可以动手操作的完整链路。
+This demo connects Bitcoin's core concepts—**wallets, transactions, mining, the blockchain, UTXOs, and Merkle proofs**—into a complete hands-on workflow.
 
-你不需要理解底层代码，只需要跟着界面操作，就能直观感受到：
+You do not need to understand the underlying code. By following the interface workflow, you can directly observe:
 
-- 钱是怎么"生"出来的（挖矿）
-- 钱是怎么转移的（交易）
-- 交易是怎么被确认的（打包进区块）
-- 区块链是怎么一个接一个长起来的
-- 怎么证明某笔交易确实存在（Merkle 验证）
+- How funds are created through mining
+- How funds move through transactions
+- How transactions are confirmed by being packaged into blocks
+- How the blockchain grows one block at a time
+- How to prove that a transaction exists through Merkle verification
 
-**现在，打开浏览器，开始你的区块链探索之旅吧！**
+**Open the browser and begin exploring the blockchain.**
