@@ -4,13 +4,13 @@ import {Hash} from './hash'
 const ec = new elliptic.ec('secp256k1')
 
 /**
- * ECDSA 签名和验证工具类
- * 使用 secp256k1 椭圆曲线（与比特币相同）
+ * ECDSA signing and verification utilities.
+ * Uses the secp256k1 elliptic curve used by Bitcoin.
  */
 export class Signature {
   /**
-   * 生成新的密钥对
-   * @returns 包含私钥和公钥的对象
+   * Generate a new key pair.
+   * @returns An object containing the private and public keys.
    */
   static generateKeyPair(): {privateKey: string; publicKey: string} {
     const keyPair = ec.genKeyPair()
@@ -21,9 +21,9 @@ export class Signature {
   }
 
   /**
-   * 从私钥导出公钥
-   * @param privateKey 私钥（十六进制字符串）
-   * @returns 公钥（十六进制字符串）
+   * Derive a public key from a private key.
+   * @param privateKey Private key as a hexadecimal string.
+   * @returns Public key as a hexadecimal string.
    */
   static getPublicKeyFromPrivate(privateKey: string): string {
     const keyPair = ec.keyFromPrivate(privateKey, 'hex')
@@ -31,10 +31,10 @@ export class Signature {
   }
 
   /**
-   * 对数据进行签名
-   * @param data 要签名的数据
-   * @param privateKey 私钥
-   * @returns 签名（十六进制字符串）
+   * Sign data.
+   * @param data Data to sign.
+   * @param privateKey Private key.
+   * @returns Signature as a hexadecimal string.
    */
   static sign(data: string, privateKey: string): string {
     const hash = Hash.sha256(data)
@@ -45,11 +45,11 @@ export class Signature {
   }
 
   /**
-   * 验证签名
-   * @param data 原始数据
-   * @param signature 签名
-   * @param publicKey 公钥
-   * @returns 签名是否有效
+   * Verify a signature.
+   * @param data Original data.
+   * @param signature Signature to verify.
+   * @param publicKey Public key.
+   * @returns Whether the signature is valid.
    */
   static verify(data: string, signature: string, publicKey: string): boolean {
     try {
@@ -62,10 +62,10 @@ export class Signature {
   }
 
   /**
-   * 验证密钥对是否匹配
-   * @param privateKey 私钥
-   * @param publicKey 公钥
-   * @returns 是否匹配
+   * Verify that a private and public key belong to the same key pair.
+   * @param privateKey Private key.
+   * @param publicKey Public key.
+   * @returns Whether the keys match.
    */
   static verifyKeyPair(privateKey: string, publicKey: string): boolean {
     const derivedPublicKey = this.getPublicKeyFromPrivate(privateKey)
