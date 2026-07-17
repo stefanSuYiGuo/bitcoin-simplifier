@@ -115,7 +115,7 @@ The essential rule is that a transaction must contain at least one input and one
 
 ### 3.2 Calculating the Transaction ID
 
-The transaction ID is a hash of the transaction content and uniquely identifies the transaction. In this implementation, the signing content excludes signatures because each signature is itself derived from that content. Including it would create a circular dependency.
+The transaction ID is a hash of the transaction content and uniquely identifies the transaction. Importantly, its calculation should not include signatures, because a signature is itself based on a hash of the transaction content. Including the signature would create a circular dependency.
 
 ```typescript
 private calculateId(): string {
@@ -195,7 +195,7 @@ The 1 BTC difference is the fee awarded to the miner who includes the transactio
 
 ### 3.4 Coinbase Transactions: A Special First Transaction
 
-The first transaction in every block is a special coinbase transaction that pays the miner's reward. It has no conventional input because it creates new bitcoin according to the protocol's issuance rules.
+The first transaction in every block is a special coinbase transaction that pays the miner's reward. It has no actual input because it creates new bitcoin.
 
 ```typescript
 static createCoinbase(
@@ -423,7 +423,7 @@ This fluent API keeps transaction-building code concise and readable.
 
 ### 5.2 UTXO Selection Strategy: A Greedy Algorithm
 
-UTXO selection is a central transaction-building problem. Given a target amount, how should a wallet choose among several available UTXOs?
+UTXO selection is a central transaction-building problem. Given a target amount, how should a wallet select the optimal combination from several available UTXOs?
 
 This implementation uses a greedy algorithm that selects the largest UTXOs first until the target is met.
 
@@ -500,7 +500,7 @@ Change: 150 - 120 = 30 BTC
 
 Advantages of this greedy algorithm:
 - Simple and efficient
-- Often selects a small number of UTXOs
+- Usually selects the minimum number of UTXOs
 - Reduces transaction size because fewer inputs require less data
 
 ### 5.3 Complete Workflow
@@ -594,6 +594,9 @@ After executing the transaction, the UTXO set changes as follows:
 
 ## 6. Summary
 
-In this article, we implemented the simplified Bitcoin transaction system. We learned how to construct transactions by selecting UTXOs, calculating change, and generating transaction IDs. We examined two layers of transaction authorization: validating the signature itself and confirming that the signer controls the referenced UTXO. We also implemented `TransactionBuilder`, which encapsulates UTXO selection and change calculation behind a concise fluent API.
+In this article, we implemented Bitcoin's transaction system. We learned how to construct transactions by selecting UTXOs, calculating change, and generating transaction IDs. We examined the two-layer validation mechanism for transaction signatures: validating the signature itself and confirming that the signer actually owns the referenced UTXO. We also implemented `TransactionBuilder`, which encapsulates the complexity of UTXO selection and change calculation behind a concise fluent API.
 
-These components form the core of value transfer in this project. Together they can create, sign, and validate transactions. `Transaction` manages the data structure, `TransactionSigner` handles authorization checks, and `TransactionBuilder` provides a convenient construction interface. Each class has a distinct responsibility within the transaction system.
+These components form the core of value transfer in Bitcoin. With them, we can create, sign, and validate transactions. `Transaction` manages the transaction data structure, `TransactionSigner` is responsible for security, and `TransactionBuilder` provides ease of use. Each class has a distinct responsibility, and together they build a robust transaction system.
+
+
+
