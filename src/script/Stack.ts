@@ -1,102 +1,102 @@
 /**
- * 脚本执行栈
- * 比特币脚本使用基于栈的执行模型
+ * Script execution stack.
+ * Bitcoin Script uses a stack-based execution model.
  */
 
 /**
- * 栈元素类型
- * 可以是字节数组（十六进制字符串）或数值
+ * Stack element type.
+ * Represents a byte array as a hexadecimal string.
  */
 export type StackElement = string
 
 /**
- * 脚本执行栈
+ * Script execution stack.
  */
 export class Stack {
   private items: StackElement[] = []
   private maxSize: number
 
   /**
-   * @param maxSize 栈最大深度，默认 1000（比特币限制）
+   * @param maxSize Maximum stack depth, defaulting to Bitcoin's limit of 1,000.
    */
   constructor(maxSize: number = 1000) {
     this.maxSize = maxSize
   }
 
   /**
-   * 压入元素
+   * Push an item.
    */
   push(item: StackElement): void {
     if (this.items.length >= this.maxSize) {
-      throw new Error(`栈溢出：超过最大深度 ${this.maxSize}`)
+      throw new Error(`Stack overflow: maximum depth of ${this.maxSize} exceeded`)
     }
     this.items.push(item)
   }
 
   /**
-   * 弹出栈顶元素
+   * Pop the top item.
    */
   pop(): StackElement {
     if (this.items.length === 0) {
-      throw new Error('栈下溢：栈为空')
+      throw new Error('Stack underflow: stack is empty')
     }
     return this.items.pop()!
   }
 
   /**
-   * 查看栈顶元素（不弹出）
+   * Peek at the top item without removing it.
    */
   peek(): StackElement {
     if (this.items.length === 0) {
-      throw new Error('栈为空')
+      throw new Error('Stack is empty')
     }
     return this.items[this.items.length - 1]
   }
 
   /**
-   * 查看栈中第 n 个元素（0 为栈顶）
+   * Peek at the nth item, where 0 is the top.
    */
   peekAt(n: number): StackElement {
     if (n < 0 || n >= this.items.length) {
-      throw new Error(`索引越界: ${n}`)
+      throw new Error(`Stack index out of bounds: ${n}`)
     }
     return this.items[this.items.length - 1 - n]
   }
 
   /**
-   * 获取栈深度
+   * Get the stack depth.
    */
   size(): number {
     return this.items.length
   }
 
   /**
-   * 栈是否为空
+   * Check whether the stack is empty.
    */
   isEmpty(): boolean {
     return this.items.length === 0
   }
 
   /**
-   * 清空栈
+   * Clear the stack.
    */
   clear(): void {
     this.items = []
   }
 
   /**
-   * 复制栈顶元素
+   * Duplicate the top item.
    */
   dup(): void {
     this.push(this.peek())
   }
 
   /**
-   * 交换栈顶两个元素
+   * Swap the top two items.
    */
   swap(): void {
     if (this.items.length < 2) {
-      throw new Error('栈元素不足：需要至少 2 个元素')
+      throw new Error('Insufficient stack items: at least 2 required')
     }
     const a = this.pop()
     const b = this.pop()
@@ -105,12 +105,12 @@ export class Stack {
   }
 
   /**
-   * 旋转栈顶三个元素
+   * Rotate the top three items.
    * [x1, x2, x3] -> [x2, x3, x1]
    */
   rot(): void {
     if (this.items.length < 3) {
-      throw new Error('栈元素不足：需要至少 3 个元素')
+      throw new Error('Insufficient stack items: at least 3 required')
     }
     const x3 = this.pop()
     const x2 = this.pop()
@@ -121,21 +121,21 @@ export class Stack {
   }
 
   /**
-   * 复制栈顶第二个元素到栈顶
+   * Copy the second item to the top.
    */
   over(): void {
     if (this.items.length < 2) {
-      throw new Error('栈元素不足：需要至少 2 个元素')
+      throw new Error('Insufficient stack items: at least 2 required')
     }
     this.push(this.peekAt(1))
   }
 
   /**
-   * 删除栈顶第二个元素
+   * Remove the second item.
    */
   nip(): void {
     if (this.items.length < 2) {
-      throw new Error('栈元素不足：需要至少 2 个元素')
+      throw new Error('Insufficient stack items: at least 2 required')
     }
     const top = this.pop()
     this.pop()
@@ -143,11 +143,11 @@ export class Stack {
   }
 
   /**
-   * 将栈顶元素复制并插入到第二个位置之前
+   * Copy the top item and insert it before the second item.
    */
   tuck(): void {
     if (this.items.length < 2) {
-      throw new Error('栈元素不足：需要至少 2 个元素')
+      throw new Error('Insufficient stack items: at least 2 required')
     }
     const top = this.pop()
     const second = this.pop()
@@ -157,18 +157,18 @@ export class Stack {
   }
 
   /**
-   * 复制栈中第 n 个元素到栈顶
+   * Copy the nth item to the top.
    */
   pick(n: number): void {
     this.push(this.peekAt(n))
   }
 
   /**
-   * 移动栈中第 n 个元素到栈顶
+   * Move the nth item to the top.
    */
   roll(n: number): void {
     if (n < 0 || n >= this.items.length) {
-      throw new Error(`索引越界: ${n}`)
+      throw new Error(`Stack index out of bounds: ${n}`)
     }
     const index = this.items.length - 1 - n
     const item = this.items.splice(index, 1)[0]
@@ -176,7 +176,7 @@ export class Stack {
   }
 
   /**
-   * 删除栈顶两个元素
+   * Remove the top two items.
    */
   drop2(): void {
     this.pop()
@@ -184,11 +184,11 @@ export class Stack {
   }
 
   /**
-   * 复制栈顶两个元素
+   * Duplicate the top two items.
    */
   dup2(): void {
     if (this.items.length < 2) {
-      throw new Error('栈元素不足：需要至少 2 个元素')
+      throw new Error('Insufficient stack items: at least 2 required')
     }
     const a = this.peekAt(1)
     const b = this.peekAt(0)
@@ -197,11 +197,11 @@ export class Stack {
   }
 
   /**
-   * 复制栈顶三个元素
+   * Duplicate the top three items.
    */
   dup3(): void {
     if (this.items.length < 3) {
-      throw new Error('栈元素不足：需要至少 3 个元素')
+      throw new Error('Insufficient stack items: at least 3 required')
     }
     const a = this.peekAt(2)
     const b = this.peekAt(1)
@@ -212,11 +212,11 @@ export class Stack {
   }
 
   /**
-   * 复制栈顶第三、四个元素到栈顶
+   * Copy the third and fourth items to the top.
    */
   over2(): void {
     if (this.items.length < 4) {
-      throw new Error('栈元素不足：需要至少 4 个元素')
+      throw new Error('Insufficient stack items: at least 4 required')
     }
     const a = this.peekAt(3)
     const b = this.peekAt(2)
@@ -225,12 +225,12 @@ export class Stack {
   }
 
   /**
-   * 交换栈顶两对元素
+   * Swap the top two pairs of items.
    * [x1, x2, x3, x4] -> [x3, x4, x1, x2]
    */
   swap2(): void {
     if (this.items.length < 4) {
-      throw new Error('栈元素不足：需要至少 4 个元素')
+      throw new Error('Insufficient stack items: at least 4 required')
     }
     const x4 = this.pop()
     const x3 = this.pop()
@@ -243,14 +243,14 @@ export class Stack {
   }
 
   /**
-   * 获取所有元素（从栈底到栈顶）
+   * Get all items from bottom to top.
    */
   getItems(): StackElement[] {
     return [...this.items]
   }
 
   /**
-   * 转换为字符串（用于调试）
+   * Convert the stack to a debug string.
    */
   toString(): string {
     if (this.items.length === 0) {
@@ -267,12 +267,12 @@ export class Stack {
 }
 
 /**
- * 栈元素工具函数
+ * Stack element utilities.
  */
 export const StackUtils = {
   /**
-   * 将数值编码为栈元素
-   * 比特币使用小端序有符号整数
+   * Encode a number as a stack element.
+   * Bitcoin uses little-endian signed integers.
    */
   encodeNumber(num: number): StackElement {
     if (num === 0) return ''
@@ -286,7 +286,7 @@ export const StackUtils = {
       absNum >>= 8
     }
 
-    // 如果最高位已设置，需要添加符号字节
+    // Add a sign byte when the high bit is set
     if (bytes[bytes.length - 1] & 0x80) {
       bytes.push(negative ? 0x80 : 0x00)
     } else if (negative) {
@@ -297,7 +297,7 @@ export const StackUtils = {
   },
 
   /**
-   * 将栈元素解码为数值
+   * Decode a stack element as a number.
    */
   decodeNumber(element: StackElement): number {
     if (element === '' || element.length === 0) return 0
@@ -305,20 +305,20 @@ export const StackUtils = {
     const bytes = Buffer.from(element, 'hex')
     if (bytes.length === 0) return 0
 
-    // 检查符号位
+    // Check the sign bit
     const negative = (bytes[bytes.length - 1] & 0x80) !== 0
 
     let result = 0
     for (let i = bytes.length - 1; i >= 0; i--) {
       let byte = bytes[i]
-      // 最高字节需要清除符号位
+      // Clear the sign bit in the highest byte
       if (i === bytes.length - 1 && negative) {
         byte &= 0x7f
       }
       result = (result << 8) | byte
     }
 
-    // 小端序重新计算
+    // Recalculate in little-endian order
     result = 0
     for (let i = 0; i < bytes.length; i++) {
       let byte = bytes[i]
@@ -332,8 +332,8 @@ export const StackUtils = {
   },
 
   /**
-   * 判断栈元素是否为"真"
-   * 空字符串或全零为假，其他为真
+   * Check whether a stack element is true.
+   * An empty or all-zero value is false; every other value is true.
    */
   isTrue(element: StackElement): boolean {
     if (element === '' || element.length === 0) return false
@@ -341,7 +341,7 @@ export const StackUtils = {
     const bytes = Buffer.from(element, 'hex')
     for (let i = 0; i < bytes.length; i++) {
       if (bytes[i] !== 0) {
-        // 最后一个字节如果只有 0x80（负零）也是假
+        // A final byte containing only 0x80 represents negative zero and is false
         if (i === bytes.length - 1 && bytes[i] === 0x80) {
           return false
         }
@@ -352,21 +352,21 @@ export const StackUtils = {
   },
 
   /**
-   * 布尔值转栈元素
+   * Encode a boolean as a stack element.
    */
   encodeBool(value: boolean): StackElement {
     return value ? '01' : ''
   },
 
   /**
-   * 字符串转栈元素（UTF-8 编码）
+   * Encode a UTF-8 string as a stack element.
    */
   encodeString(str: string): StackElement {
     return Buffer.from(str, 'utf8').toString('hex')
   },
 
   /**
-   * 栈元素转字符串
+   * Decode a stack element as a string.
    */
   decodeString(element: StackElement): string {
     return Buffer.from(element, 'hex').toString('utf8')
