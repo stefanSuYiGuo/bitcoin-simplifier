@@ -1,18 +1,18 @@
 import * as CryptoJS from 'crypto-js'
 
 /**
- * SHA-256 哈希函数封装
+ * SHA-256 hashing utilities.
  */
 export class Hash {
   /**
-   * 计算单次 SHA-256 哈希
+   * Calculate a single SHA-256 hash.
    */
   static sha256(data: string): string {
     return CryptoJS.SHA256(data).toString()
   }
 
   /**
-   * 计算双重 SHA-256 哈希 (比特币常用)
+   * Calculate the double SHA-256 hash commonly used by Bitcoin.
    */
   static doubleSha256(data: string): string {
     const firstHash = this.sha256(data)
@@ -20,14 +20,14 @@ export class Hash {
   }
 
   /**
-   * RIPEMD-160 哈希 (用于地址生成)
+   * Calculate a RIPEMD-160 hash for address generation.
    */
   static ripemd160(data: string): string {
     return CryptoJS.RIPEMD160(data).toString()
   }
 
   /**
-   * 计算对象的哈希 (先序列化为 JSON)
+   * Hash an object after serializing it to JSON.
    */
   static hashObject(obj: any): string {
     const jsonString = JSON.stringify(obj)
