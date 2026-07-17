@@ -1,36 +1,36 @@
-# 比特币脚本系统实现路线图
+# Bitcoin Script System Implementation Roadmap
 
-## 概述
+## Overview
 
-脚本系统是比特币的核心特性之一，提供了灵活的交易验证机制。本文档规划了如何将脚本系统添加到当前的简化实现中。
+The script system is one of Bitcoin's core features and provides a flexible transaction validation mechanism. This document plans how to add the script system to the current simplified implementation.
 
-## 为什么需要脚本系统？
+## Why Is a Script System Necessary?
 
-### 当前实现的限制
+### Limitations of the Current Implementation
 
 ```typescript
-// 简化版：只支持简单的单签转账
+// Simplified version: supports only basic single-signature transfers
 interface TxInput {
   txId: string
   outputIndex: number
-  signature: string    // 单个签名
-  publicKey: string    // 单个公钥
+  signature: string    // Single signature
+  publicKey: string    // Single public key
 }
 ```
 
-### 脚本系统的优势
+### Advantages of the Script System
 
-1. **多签名支持**: 2-of-3, 3-of-5 等多签钱包
-2. **时间锁**: 指定时间后才能花费
-3. **哈希锁**: 知道原像才能花费（用于原子交换）
-4. **复杂条件**: 组合多种条件的支付
-5. **更接近真实比特币**: 理解真实比特币的工作原理
+1. **Multisignature support**: 2-of-3, 3-of-5, and other multisignature wallets
+2. **Time locks**: Permit spending only after a specified time
+3. **Hash locks**: Require knowledge of a preimage to spend, as used in atomic swaps
+4. **Complex conditions**: Combine multiple payment conditions
+5. **Closer to real Bitcoin**: Understand how real Bitcoin works
 
-## 实现计划
+## Implementation Plan
 
-### Phase 1: 核心组件 (2-3 周)
+### Phase 1: Core Components (2–3 Weeks)
 
-#### 1.1 栈数据结构 (`Stack.ts`)
+#### 1.1 Stack Data Structure (`Stack.ts`)
 
 ```typescript
 class Stack {
@@ -40,38 +40,38 @@ class Stack {
   pop(): Buffer | undefined
   peek(): Buffer | undefined
   size(): number
-  dup(): void      // 复制栈顶
-  swap(): void     // 交换栈顶两个元素
+  dup(): void      // Duplicate the top item
+  swap(): void     // Swap the top two items
   clear(): void
 }
 ```
 
-**测试重点**:
-- 基本栈操作
-- 边界条件（空栈、栈溢出）
-- Buffer 类型处理
+**Testing focus**:
+- Basic stack operations
+- Boundary conditions, including empty stacks and stack overflow
+- Buffer type handling
 
-#### 1.2 操作码定义 (`OpCodes.ts`)
+#### 1.2 Opcode Definitions (`OpCodes.ts`)
 
 ```typescript
 export enum OpCode {
-  // 常量
+  // Constants
   OP_0 = 0x00,
   OP_1 = 0x51,
-  // ... OP_2 到 OP_16
+  // ... OP_2 through OP_16
   
-  // 栈操作
+  // Stack operations
   OP_DUP = 0x76,
   OP_DROP = 0x75,
   OP_SWAP = 0x7c,
   
-  // 加密操作
+  // Cryptographic operations
   OP_SHA256 = 0xa8,
   OP_HASH160 = 0xa9,
   OP_CHECKSIG = 0xac,
   OP_CHECKMULTISIG = 0xae,
   
-  // 逻辑操作
+  // Logical operations
   OP_EQUAL = 0x87,
   OP_EQUALVERIFY = 0x88,
   OP_VERIFY = 0x69,
@@ -82,13 +82,13 @@ export interface OpCodeHandler {
 }
 ```
 
-**实现操作码** (优先级顺序):
-1. 第一批：OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG (P2PKH 需要)
-2. 第二批：OP_EQUAL, OP_VERIFY (基础验证)
-3. 第三批：OP_CHECKMULTISIG (多签)
-4. 第四批：其他栈操作和算术操作
+**Opcode implementation** (in priority order):
+1. First group: OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG (required for P2PKH)
+2. Second group: OP_EQUAL, OP_VERIFY (basic validation)
+3. Third group: OP_CHECKMULTISIG (multisignature)
+4. Fourth group: Other stack and arithmetic operations
 
-#### 1.3 脚本解析器和执行器 (`Script.ts`)
+#### 1.3 Script Parser and Executor (`Script.ts`)
 
 ```typescript
 class Script {
@@ -98,38 +98,38 @@ class Script {
     this.bytecode = this.parse(script)
   }
   
-  // 解析脚本字符串/十六进制为字节码
+  // Parse a script string or hexadecimal value into bytecode
   parse(script: string | Buffer): Buffer
   
-  // 执行脚本
+  // Execute the script
   execute(
     stack: Stack,
     transaction?: Transaction,
     inputIndex?: number
   ): boolean
   
-  // 序列化
+  // Serialize
   serialize(): Buffer
   toHex(): string
-  toString(): string  // 可读格式
+  toString(): string  // Human-readable format
   
-  // 反序列化
+  // Deserialize
   static deserialize(buffer: Buffer): Script
   static fromHex(hex: string): Script
 }
 ```
 
-**执行流程**:
+**Execution flow**:
 ```
-1. 初始化空栈
-2. 遍历字节码
-3. 对每个操作码：
-   - 如果是数据，推入栈
-   - 如果是操作码，执行对应操作
-4. 检查执行结果（栈顶为 true）
+1. Initialize an empty stack
+2. Iterate through the bytecode
+3. For each element:
+   - If it is data, push it onto the stack
+   - If it is an opcode, execute the corresponding operation
+4. Check the execution result; the top stack value must be true
 ```
 
-### Phase 2: 脚本构建器 (1 周)
+### Phase 2: Script Builder (1 Week)
 
 #### 2.1 ScriptBuilder (`ScriptBuilder.ts`)
 
@@ -163,44 +163,44 @@ class ScriptBuilder {
   static buildMultiSig(m: number, publicKeys: Buffer[]): Script
   static buildMultiSigUnlock(signatures: Buffer[]): Script
   
-  // 辅助方法
+  // Helper methods
   pushOp(opcode: OpCode): ScriptBuilder
   pushData(data: Buffer): ScriptBuilder
   build(): Script
 }
 ```
 
-### Phase 3: 交易集成 (1-2 周)
+### Phase 3: Transaction Integration (1–2 Weeks)
 
-#### 3.1 更新交易数据结构
+#### 3.1 Update the Transaction Data Structure
 
 ```typescript
-// 添加脚本版本的输入输出
+// Add script-based inputs and outputs
 interface TxInputScript {
   txId: string
   outputIndex: number
-  scriptSig: string    // 十六进制编码的脚本
-  sequence: number     // 默认 0xffffffff
+  scriptSig: string    // Hexadecimal-encoded script
+  sequence: number     // Defaults to 0xffffffff
 }
 
 interface TxOutputScript {
   amount: number
-  scriptPubKey: string // 十六进制编码的脚本
+  scriptPubKey: string // Hexadecimal-encoded script
 }
 
-// 交易类支持两种模式
+// The transaction class supports both modes
 class Transaction {
   version: number
   inputs: TxInput[] | TxInputScript[]
   outputs: TxOutput[] | TxOutputScript[]
   lockTime: number
   
-  // 模式标识
+  // Mode indicator
   useScriptMode: boolean
 }
 ```
 
-#### 3.2 脚本验证器
+#### 3.2 Script Validator
 
 ```typescript
 class ScriptValidator {
@@ -212,22 +212,22 @@ class ScriptValidator {
     const input = transaction.inputs[inputIndex]
     const utxo = utxoSet.get(input.txId, input.outputIndex)
     
-    // 创建栈
+    // Create the stack
     const stack = new Stack()
     
-    // 执行 scriptSig
+    // Execute scriptSig
     const scriptSig = Script.fromHex(input.scriptSig)
     if (!scriptSig.execute(stack, transaction, inputIndex)) {
       return false
     }
     
-    // 执行 scriptPubKey
+    // Execute scriptPubKey
     const scriptPubKey = Script.fromHex(utxo.scriptPubKey)
     if (!scriptPubKey.execute(stack, transaction, inputIndex)) {
       return false
     }
     
-    // 检查结果
+    // Check the result
     return this.isStackTrue(stack)
   }
   
@@ -239,13 +239,13 @@ class ScriptValidator {
 }
 ```
 
-### Phase 4: 向后兼容 (1 周)
+### Phase 4: Backward Compatibility (1 Week)
 
-#### 4.1 兼容层
+#### 4.1 Compatibility Layer
 
 ```typescript
 class TransactionAdapter {
-  // 简化版 → 脚本版
+  // Simplified version → script version
   static toScriptMode(simpleTx: Transaction): Transaction {
     const scriptTx = { ...simpleTx }
     
@@ -275,19 +275,19 @@ class TransactionAdapter {
     return scriptTx
   }
   
-  // 脚本版 → 简化版 (仅支持 P2PKH)
+  // Script version → simplified version (P2PKH only)
   static toSimpleMode(scriptTx: Transaction): Transaction {
-    // 解析脚本提取签名和公钥
+    // Parse the script to extract the signature and public key
   }
 }
 ```
 
-#### 4.2 配置开关
+#### 4.2 Configuration Switch
 
 ```typescript
-// 全局配置
+// Global configuration
 export const Config = {
-  useScriptMode: false,  // 默认使用简化模式
+  useScriptMode: false,  // Use simplified mode by default
   scriptLimits: {
     maxScriptSize: 10000,
     maxStackSize: 1000,
@@ -295,137 +295,137 @@ export const Config = {
   }
 }
 
-// 在验证时检查模式
+// Check the mode during validation
 if (Config.useScriptMode) {
-  // 使用脚本验证
+  // Use script validation
   return ScriptValidator.validateInput(...)
 } else {
-  // 使用简化验证
+  // Use simplified validation
   return Signature.verify(...)
 }
 ```
 
-### Phase 5: 测试和文档 (1-2 周)
+### Phase 5: Tests and Documentation (1–2 Weeks)
 
-#### 5.1 单元测试
+#### 5.1 Unit Tests
 
-- [ ] Stack 操作测试
-- [ ] 每个 OpCode 的测试
-- [ ] Script 解析和执行测试
-- [ ] ScriptBuilder 测试
-- [ ] P2PKH 完整流程测试
-- [ ] P2SH 完整流程测试
-- [ ] MultiSig 完整流程测试
-- [ ] 兼容层测试
+- [ ] Stack operation tests
+- [ ] Tests for each OpCode
+- [ ] Script parsing and execution tests
+- [ ] ScriptBuilder tests
+- [ ] Complete P2PKH workflow tests
+- [ ] Complete P2SH workflow tests
+- [ ] Complete MultiSig workflow tests
+- [ ] Compatibility layer tests
 
-#### 5.2 集成测试
+#### 5.2 Integration Tests
 
-- [ ] 创建脚本交易并验证
-- [ ] 多签钱包转账流程
-- [ ] 简化模式 ↔ 脚本模式转换
-- [ ] 错误处理和边界条件
+- [ ] Create and validate script transactions
+- [ ] Multisignature wallet transfer workflow
+- [ ] Simplified mode ↔ script mode conversion
+- [ ] Error handling and boundary conditions
 
-#### 5.3 示例和文档
+#### 5.3 Examples and Documentation
 
-- [ ] P2PKH 交易示例
-- [ ] 多签钱包示例
-- [ ] P2SH 交易示例
-- [ ] API 文档
-- [ ] 迁移指南（简化版 → 脚本版）
+- [ ] P2PKH transaction example
+- [ ] Multisignature wallet example
+- [ ] P2SH transaction example
+- [ ] API documentation
+- [ ] Migration guide (simplified version → script version)
 
-## 关键技术决策
+## Key Technical Decisions
 
-### 1. 字节码格式
+### 1. Bytecode Format
 
-使用比特币原始的字节码格式：
-- 兼容真实比特币
-- 可以学习真实的脚本执行
-- 方便调试和理解
+Use Bitcoin's original bytecode format:
+- Compatible with real Bitcoin
+- Supports learning real script execution
+- Facilitates debugging and understanding
 
-### 2. 执行引擎
+### 2. Execution Engine
 
-基于栈的虚拟机：
-- 简单直观
-- 易于实现
-- 与比特币一致
+Stack-based virtual machine:
+- Simple and intuitive
+- Easy to implement
+- Consistent with Bitcoin
 
-### 3. 安全限制
+### 3. Security Limits
 
-实现所有比特币的安全限制：
-- 脚本大小限制
-- 栈深度限制
-- 操作码数量限制
-- 禁用某些危险操作码
+Implement all Bitcoin security limits:
+- Script size limit
+- Stack depth limit
+- Opcode count limit
+- Disable certain dangerous opcodes
 
-### 4. 向后兼容
+### 4. Backward Compatibility
 
-保留简化版接口：
-- 不破坏现有代码
-- 提供平滑迁移路径
-- 两种模式可以共存
+Retain the simplified interface:
+- Do not break existing code
+- Provide a smooth migration path
+- Allow both modes to coexist
 
-## 预期收益
+## Expected Benefits
 
-### 学习价值
+### Learning Value
 
-1. 深入理解比特币脚本系统
-2. 了解基于栈的虚拟机
-3. 学习多签名和复杂交易
-4. 掌握真实比特币的工作原理
+1. Develop a deep understanding of the Bitcoin script system
+2. Understand stack-based virtual machines
+3. Learn about multisignature and complex transactions
+4. Master how real Bitcoin works
 
-### 技术价值
+### Technical Value
 
-1. 支持更复杂的交易类型
-2. 实现多签钱包
-3. 为未来扩展打下基础
-4. 更接近生产级实现
+1. Support more complex transaction types
+2. Implement multisignature wallets
+3. Establish a foundation for future extensions
+4. Move closer to a production-grade implementation
 
-### 教学价值
+### Educational Value
 
-1. 完整展示比特币技术栈
-2. 可以演示高级特性
-3. 更好的示例和文档
-4. 更有说服力的实现
+1. Present the complete Bitcoin technology stack
+2. Demonstrate advanced features
+3. Provide better examples and documentation
+4. Provide a more compelling implementation
 
-## 风险和挑战
+## Risks and Challenges
 
-### 技术挑战
+### Technical Challenges
 
-1. **复杂性增加**: 脚本系统比简化版复杂很多
-2. **测试难度**: 需要大量测试用例覆盖
-3. **调试困难**: 脚本执行错误不容易定位
-4. **性能影响**: 脚本执行比直接验证慢
+1. **Increased complexity**: The script system is significantly more complex than the simplified version
+2. **Testing difficulty**: Extensive test coverage is required
+3. **Debugging difficulty**: Script execution errors are difficult to locate
+4. **Performance impact**: Script execution is slower than direct validation
 
-### 解决方案
+### Solutions
 
-1. **分阶段实现**: 先实现核心功能，再扩展
-2. **详细日志**: 添加脚本执行跟踪
-3. **可视化工具**: 实现栈状态可视化
-4. **性能优化**: 缓存常用脚本的验证结果
+1. **Phased implementation**: Implement core functionality before extending it
+2. **Detailed logging**: Add script execution tracing
+3. **Visualization tools**: Implement stack state visualization
+4. **Performance optimization**: Cache validation results for frequently used scripts
 
-## 时间估算
+## Time Estimate
 
-| 阶段 | 时间 | 任务 |
+| Phase | Duration | Task |
 |------|------|------|
-| Phase 1 | 2-3 周 | 核心组件实现 |
-| Phase 2 | 1 周 | 脚本构建器 |
-| Phase 3 | 1-2 周 | 交易集成 |
-| Phase 4 | 1 周 | 向后兼容 |
-| Phase 5 | 1-2 周 | 测试和文档 |
-| **总计** | **6-9 周** | |
+| Phase 1 | 2–3 weeks | Core component implementation |
+| Phase 2 | 1 week | Script builder |
+| Phase 3 | 1–2 weeks | Transaction integration |
+| Phase 4 | 1 week | Backward compatibility |
+| Phase 5 | 1–2 weeks | Tests and documentation |
+| **Total** | **6–9 weeks** | |
 
-## 下一步行动
+## Next Actions
 
-1. [ ] 审查和确认技术方案
-2. [ ] 创建功能分支 `feature/script-system`
-3. [ ] 实现 Stack 类和测试
-4. [ ] 实现基础操作码（OP_DUP, OP_HASH160 等）
-5. [ ] 实现 Script 执行引擎
-6. [ ] 实现 P2PKH 脚本
-7. [ ] 集成到交易验证
-8. [ ] 完整测试和文档
+1. [ ] Review and confirm the technical approach
+2. [ ] Create the `feature/script-system` feature branch
+3. [ ] Implement the Stack class and tests
+4. [ ] Implement basic opcodes such as OP_DUP and OP_HASH160
+5. [ ] Implement the Script execution engine
+6. [ ] Implement P2PKH scripts
+7. [ ] Integrate scripts into transaction validation
+8. [ ] Complete tests and documentation
 
-## 参考资料
+## References
 
 - [Bitcoin Script](https://en.bitcoin.it/wiki/Script)
 - [Mastering Bitcoin - Chapter 7: Advanced Transactions](https://github.com/bitcoinbook/bitcoinbook/blob/develop/ch07.asciidoc)
