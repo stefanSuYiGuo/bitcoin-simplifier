@@ -1,8 +1,8 @@
 import {MerkleTree} from '../MerkleTree'
 
 describe('MerkleTree', () => {
-  describe('构建 Merkle 树', () => {
-    test('应该能创建单个数据的 Merkle 树', () => {
+  describe('tree construction', () => {
+    test('creates a Merkle tree from a single data element', () => {
       const data = ['tx1']
       const tree = new MerkleTree(data)
 
@@ -10,7 +10,7 @@ describe('MerkleTree', () => {
       expect(tree.getLeafCount()).toBe(1)
     })
 
-    test('应该能创建多个数据的 Merkle 树', () => {
+    test('creates a Merkle tree from multiple data elements', () => {
       const data = ['tx1', 'tx2', 'tx3', 'tx4']
       const tree = new MerkleTree(data)
 
@@ -19,11 +19,11 @@ describe('MerkleTree', () => {
       expect(tree.getHeight()).toBe(3)
     })
 
-    test('应该拒绝空数据', () => {
+    test('rejects empty data', () => {
       expect(() => new MerkleTree([])).toThrow()
     })
 
-    test('奇数个数据应该复制最后一个', () => {
+    test('duplicates the final element when the count is odd', () => {
       const data = ['tx1', 'tx2', 'tx3']
       const tree = new MerkleTree(data)
 
@@ -32,8 +32,8 @@ describe('MerkleTree', () => {
     })
   })
 
-  describe('Merkle 根', () => {
-    test('相同数据应该产生相同的 Merkle 根', () => {
+  describe('Merkle root', () => {
+    test('produces the same Merkle root for identical data', () => {
       const data = ['tx1', 'tx2', 'tx3']
       const tree1 = new MerkleTree(data)
       const tree2 = new MerkleTree(data)
@@ -41,14 +41,14 @@ describe('MerkleTree', () => {
       expect(tree1.getRoot()).toBe(tree2.getRoot())
     })
 
-    test('不同数据应该产生不同的 Merkle 根', () => {
+    test('produces different Merkle roots for different data', () => {
       const tree1 = new MerkleTree(['tx1', 'tx2'])
       const tree2 = new MerkleTree(['tx1', 'tx3'])
 
       expect(tree1.getRoot()).not.toBe(tree2.getRoot())
     })
 
-    test('数据顺序不同应该产生不同的 Merkle 根', () => {
+    test('produces different Merkle roots when data order changes', () => {
       const tree1 = new MerkleTree(['tx1', 'tx2'])
       const tree2 = new MerkleTree(['tx2', 'tx1'])
 
@@ -56,7 +56,7 @@ describe('MerkleTree', () => {
     })
   })
 
-  describe('Merkle 证明', () => {
+  describe('Merkle proofs', () => {
     const data = ['tx1', 'tx2', 'tx3', 'tx4']
     let tree: MerkleTree
     let root: string
@@ -66,19 +66,19 @@ describe('MerkleTree', () => {
       root = tree.getRoot()
     })
 
-    test('应该能生成有效的 Merkle 证明', () => {
+    test('generates a valid Merkle proof', () => {
       const proof = tree.getProof('tx1')
       expect(proof).toBeDefined()
       expect(proof.length).toBeGreaterThan(0)
     })
 
-    test('应该能验证正确的 Merkle 证明', () => {
+    test('verifies a correct Merkle proof', () => {
       const proof = tree.getProof('tx1')
       const isValid = MerkleTree.verify('tx1', proof, root)
       expect(isValid).toBe(true)
     })
 
-    test('所有数据都应该能验证', () => {
+    test('verifies every data element', () => {
       for (const item of data) {
         const proof = tree.getProof(item)
         const isValid = MerkleTree.verify(item, proof, root)
@@ -86,26 +86,26 @@ describe('MerkleTree', () => {
       }
     })
 
-    test('错误的数据应该验证失败', () => {
+    test('rejects incorrect data', () => {
       const proof = tree.getProof('tx1')
       const isValid = MerkleTree.verify('tx5', proof, root)
       expect(isValid).toBe(false)
     })
 
-    test('错误的根应该验证失败', () => {
+    test('rejects an incorrect root', () => {
       const proof = tree.getProof('tx1')
       const fakeRoot = 'fake_root'
       const isValid = MerkleTree.verify('tx1', proof, fakeRoot)
       expect(isValid).toBe(false)
     })
 
-    test('不存在的数据应该抛出错误', () => {
+    test('throws for data that is not in the tree', () => {
       expect(() => tree.getProof('tx999')).toThrow()
     })
   })
 
-  describe('树的属性', () => {
-    test('应该正确计算树的高度', () => {
+  describe('tree properties', () => {
+    test('calculates the tree height correctly', () => {
       expect(new MerkleTree(['tx1']).getHeight()).toBe(1)
       expect(new MerkleTree(['tx1', 'tx2']).getHeight()).toBe(2)
       expect(new MerkleTree(['tx1', 'tx2', 'tx3', 'tx4']).getHeight()).toBe(3)
@@ -114,14 +114,14 @@ describe('MerkleTree', () => {
       ).toBe(4)
     })
 
-    test('应该正确返回叶子节点数量', () => {
+    test('returns the correct leaf count', () => {
       const tree = new MerkleTree(['tx1', 'tx2', 'tx3'])
       expect(tree.getLeafCount()).toBe(3)
     })
   })
 
-  describe('序列化', () => {
-    test('应该能序列化为 JSON', () => {
+  describe('serialization', () => {
+    test('serializes to JSON', () => {
       const tree = new MerkleTree(['tx1', 'tx2', 'tx3'])
       const json = tree.toJSON()
 
