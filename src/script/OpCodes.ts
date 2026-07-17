@@ -1,21 +1,21 @@
 /**
- * 比特币脚本操作码定义
- * 基于比特币脚本语言的子集实现
+ * Bitcoin Script opcode definitions.
+ * Implements a subset of the Bitcoin scripting language.
  */
 
 /**
- * 操作码枚举
+ * Opcode enumeration.
  */
 export enum OpCode {
-  // ============ 常量操作码 ============
-  OP_0 = 0x00, // 将空字节数组压入栈
-  OP_FALSE = 0x00, // OP_0 的别名
-  OP_PUSHDATA1 = 0x4c, // 下一个字节是数据长度
-  OP_PUSHDATA2 = 0x4d, // 下两个字节是数据长度
-  OP_PUSHDATA4 = 0x4e, // 下四个字节是数据长度
-  OP_1NEGATE = 0x4f, // 将 -1 压入栈
-  OP_1 = 0x51, // 将 1 压入栈
-  OP_TRUE = 0x51, // OP_1 的别名
+  // ============ Constant opcodes ============
+  OP_0 = 0x00, // Push an empty byte array onto the stack
+  OP_FALSE = 0x00, // Alias for OP_0
+  OP_PUSHDATA1 = 0x4c, // The next byte specifies the data length
+  OP_PUSHDATA2 = 0x4d, // The next two bytes specify the data length
+  OP_PUSHDATA4 = 0x4e, // The next four bytes specify the data length
+  OP_1NEGATE = 0x4f, // Push -1 onto the stack
+  OP_1 = 0x51, // Push 1 onto the stack
+  OP_TRUE = 0x51, // Alias for OP_1
   OP_2 = 0x52,
   OP_3 = 0x53,
   OP_4 = 0x54,
@@ -32,84 +32,84 @@ export enum OpCode {
   OP_15 = 0x5f,
   OP_16 = 0x60,
 
-  // ============ 流程控制 ============
-  OP_NOP = 0x61, // 无操作
-  OP_IF = 0x63, // 条件执行
-  OP_NOTIF = 0x64, // 条件执行（取反）
-  OP_ELSE = 0x67, // else 分支
-  OP_ENDIF = 0x68, // 结束条件
-  OP_VERIFY = 0x69, // 栈顶为 false 则失败
-  OP_RETURN = 0x6a, // 标记交易无效（用于存储数据）
+  // ============ Flow control ============
+  OP_NOP = 0x61, // No operation
+  OP_IF = 0x63, // Conditional execution
+  OP_NOTIF = 0x64, // Inverted conditional execution
+  OP_ELSE = 0x67, // Else branch
+  OP_ENDIF = 0x68, // End the conditional
+  OP_VERIFY = 0x69, // Fail if the top stack item is false
+  OP_RETURN = 0x6a, // Mark the transaction invalid for data storage
 
-  // ============ 栈操作 ============
-  OP_TOALTSTACK = 0x6b, // 移动到备用栈
-  OP_FROMALTSTACK = 0x6c, // 从备用栈移回
-  OP_IFDUP = 0x73, // 如果栈顶非零则复制
-  OP_DEPTH = 0x74, // 栈深度
-  OP_DROP = 0x75, // 删除栈顶元素
-  OP_DUP = 0x76, // 复制栈顶元素
-  OP_NIP = 0x77, // 删除栈顶第二个元素
-  OP_OVER = 0x78, // 复制栈顶第二个元素到栈顶
-  OP_PICK = 0x79, // 复制栈中第 n 个元素到栈顶
-  OP_ROLL = 0x7a, // 移动栈中第 n 个元素到栈顶
-  OP_ROT = 0x7b, // 旋转栈顶三个元素
-  OP_SWAP = 0x7c, // 交换栈顶两个元素
-  OP_TUCK = 0x7d, // 将栈顶元素插入到第二个位置之前
-  OP_2DROP = 0x6d, // 删除栈顶两个元素
-  OP_2DUP = 0x6e, // 复制栈顶两个元素
-  OP_3DUP = 0x6f, // 复制栈顶三个元素
-  OP_2OVER = 0x70, // 复制栈顶第三、四个元素到栈顶
-  OP_2ROT = 0x71, // 旋转栈顶六个元素
-  OP_2SWAP = 0x72, // 交换栈顶两对元素
+  // ============ Stack operations ============
+  OP_TOALTSTACK = 0x6b, // Move the top item to the alternate stack
+  OP_FROMALTSTACK = 0x6c, // Move an item back from the alternate stack
+  OP_IFDUP = 0x73, // Duplicate the top item if it is nonzero
+  OP_DEPTH = 0x74, // Push the stack depth
+  OP_DROP = 0x75, // Remove the top stack item
+  OP_DUP = 0x76, // Duplicate the top stack item
+  OP_NIP = 0x77, // Remove the second stack item
+  OP_OVER = 0x78, // Copy the second item to the top
+  OP_PICK = 0x79, // Copy the nth stack item to the top
+  OP_ROLL = 0x7a, // Move the nth stack item to the top
+  OP_ROT = 0x7b, // Rotate the top three items
+  OP_SWAP = 0x7c, // Swap the top two items
+  OP_TUCK = 0x7d, // Insert the top item before the second item
+  OP_2DROP = 0x6d, // Remove the top two items
+  OP_2DUP = 0x6e, // Duplicate the top two items
+  OP_3DUP = 0x6f, // Duplicate the top three items
+  OP_2OVER = 0x70, // Copy the third and fourth items to the top
+  OP_2ROT = 0x71, // Rotate the top six items
+  OP_2SWAP = 0x72, // Swap the top two pairs
 
-  // ============ 字符串操作 ============
-  OP_SIZE = 0x82, // 获取栈顶元素的字节长度
+  // ============ String operations ============
+  OP_SIZE = 0x82, // Push the byte length of the top item
 
-  // ============ 位运算 ============
-  OP_EQUAL = 0x87, // 检查两个元素是否相等
+  // ============ Bitwise operations ============
+  OP_EQUAL = 0x87, // Check whether two items are equal
   OP_EQUALVERIFY = 0x88, // OP_EQUAL + OP_VERIFY
 
-  // ============ 算术运算 ============
-  OP_1ADD = 0x8b, // 加 1
-  OP_1SUB = 0x8c, // 减 1
-  OP_NEGATE = 0x8f, // 取负
-  OP_ABS = 0x90, // 取绝对值
-  OP_NOT = 0x91, // 逻辑非
-  OP_0NOTEQUAL = 0x92, // 非零返回 1
-  OP_ADD = 0x93, // 加法
-  OP_SUB = 0x94, // 减法
-  OP_BOOLAND = 0x9a, // 逻辑与
-  OP_BOOLOR = 0x9b, // 逻辑或
-  OP_NUMEQUAL = 0x9c, // 数值相等
-  OP_NUMEQUALVERIFY = 0x9d, // 数值相等 + 验证
-  OP_NUMNOTEQUAL = 0x9e, // 数值不等
-  OP_LESSTHAN = 0x9f, // 小于
-  OP_GREATERTHAN = 0xa0, // 大于
-  OP_LESSTHANOREQUAL = 0xa1, // 小于等于
-  OP_GREATERTHANOREQUAL = 0xa2, // 大于等于
-  OP_MIN = 0xa3, // 取最小值
-  OP_MAX = 0xa4, // 取最大值
-  OP_WITHIN = 0xa5, // 范围检查
+  // ============ Arithmetic operations ============
+  OP_1ADD = 0x8b, // Add 1
+  OP_1SUB = 0x8c, // Subtract 1
+  OP_NEGATE = 0x8f, // Negate
+  OP_ABS = 0x90, // Absolute value
+  OP_NOT = 0x91, // Logical NOT
+  OP_0NOTEQUAL = 0x92, // Return 1 for a nonzero value
+  OP_ADD = 0x93, // Addition
+  OP_SUB = 0x94, // Subtraction
+  OP_BOOLAND = 0x9a, // Logical AND
+  OP_BOOLOR = 0x9b, // Logical OR
+  OP_NUMEQUAL = 0x9c, // Numeric equality
+  OP_NUMEQUALVERIFY = 0x9d, // Numeric equality followed by verification
+  OP_NUMNOTEQUAL = 0x9e, // Numeric inequality
+  OP_LESSTHAN = 0x9f, // Less than
+  OP_GREATERTHAN = 0xa0, // Greater than
+  OP_LESSTHANOREQUAL = 0xa1, // Less than or equal
+  OP_GREATERTHANOREQUAL = 0xa2, // Greater than or equal
+  OP_MIN = 0xa3, // Minimum value
+  OP_MAX = 0xa4, // Maximum value
+  OP_WITHIN = 0xa5, // Range check
 
-  // ============ 加密操作 ============
-  OP_RIPEMD160 = 0xa6, // RIPEMD-160 哈希
-  OP_SHA1 = 0xa7, // SHA-1 哈希
-  OP_SHA256 = 0xa8, // SHA-256 哈希
+  // ============ Cryptographic operations ============
+  OP_RIPEMD160 = 0xa6, // RIPEMD-160 hash
+  OP_SHA1 = 0xa7, // SHA-1 hash
+  OP_SHA256 = 0xa8, // SHA-256 hash
   OP_HASH160 = 0xa9, // SHA-256 + RIPEMD-160
-  OP_HASH256 = 0xaa, // 双重 SHA-256
-  OP_CODESEPARATOR = 0xab, // 签名分隔符
-  OP_CHECKSIG = 0xac, // 验证签名
-  OP_CHECKSIGVERIFY = 0xad, // 验证签名 + OP_VERIFY
-  OP_CHECKMULTISIG = 0xae, // 多重签名验证
-  OP_CHECKMULTISIGVERIFY = 0xaf, // 多重签名验证 + OP_VERIFY
+  OP_HASH256 = 0xaa, // Double SHA-256
+  OP_CODESEPARATOR = 0xab, // Signature separator
+  OP_CHECKSIG = 0xac, // Verify a signature
+  OP_CHECKSIGVERIFY = 0xad, // Verify a signature followed by OP_VERIFY
+  OP_CHECKMULTISIG = 0xae, // Verify multiple signatures
+  OP_CHECKMULTISIGVERIFY = 0xaf, // Verify multiple signatures followed by OP_VERIFY
 
-  // ============ 锁定时间 ============
+  // ============ Lock time ============
   OP_CHECKLOCKTIMEVERIFY = 0xb1, // CLTV
   OP_CHECKSEQUENCEVERIFY = 0xb2, // CSV
 }
 
 /**
- * 操作码名称映射
+ * Opcode name mapping.
  */
 export const OpCodeNames: Record<number, string> = {
   [OpCode.OP_0]: 'OP_0',
@@ -197,7 +197,7 @@ export const OpCodeNames: Record<number, string> = {
 }
 
 /**
- * 从名称获取操作码
+ * Get an opcode by name.
  */
 export function getOpCodeByName(name: string): OpCode | undefined {
   const upperName = name.toUpperCase()
@@ -210,29 +210,29 @@ export function getOpCodeByName(name: string): OpCode | undefined {
 }
 
 /**
- * 获取操作码名称
+ * Get an opcode name.
  */
 export function getOpCodeName(code: OpCode): string {
   return OpCodeNames[code] || `UNKNOWN(0x${code.toString(16)})`
 }
 
 /**
- * 判断是否是数据推送操作码 (0x01-0x4b)
- * 这些操作码直接表示后续数据的字节数
+ * Check whether a value is a data-push opcode (0x01-0x4b).
+ * These opcodes directly specify the number of following data bytes.
  */
 export function isDataPushOpCode(code: number): boolean {
   return code >= 0x01 && code <= 0x4b
 }
 
 /**
- * 判断是否是数字常量操作码 (OP_1 到 OP_16)
+ * Check whether an opcode is a numeric constant (OP_1 through OP_16).
  */
 export function isNumberOpCode(code: number): boolean {
   return code >= OpCode.OP_1 && code <= OpCode.OP_16
 }
 
 /**
- * 从数字操作码获取数值
+ * Get the numeric value represented by an opcode.
  */
 export function getNumberFromOpCode(code: OpCode): number {
   if (code === OpCode.OP_0) return 0
@@ -240,11 +240,11 @@ export function getNumberFromOpCode(code: OpCode): number {
   if (code >= OpCode.OP_1 && code <= OpCode.OP_16) {
     return code - OpCode.OP_1 + 1
   }
-  throw new Error(`不是数字操作码: ${getOpCodeName(code)}`)
+  throw new Error(`Not a numeric opcode: ${getOpCodeName(code)}`)
 }
 
 /**
- * 从数值获取数字操作码
+ * Get the numeric opcode for a value.
  */
 export function getOpCodeFromNumber(num: number): OpCode {
   if (num === 0) return OpCode.OP_0
@@ -252,7 +252,7 @@ export function getOpCodeFromNumber(num: number): OpCode {
   if (num >= 1 && num <= 16) {
     return (OpCode.OP_1 + num - 1) as OpCode
   }
-  throw new Error(`数值超出操作码范围: ${num}，需要使用 PUSHDATA`)
+  throw new Error(`Value is outside the numeric opcode range: ${num}; use PUSHDATA`)
 }
 
 
