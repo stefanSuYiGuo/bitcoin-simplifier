@@ -15,7 +15,7 @@ interface TreeNode {
 }
 
 /**
- * 完整 Merkle 树可视化组件
+ * Complete Merkle tree visualization
  */
 function MerkleTreeVisualization({
   tree,
@@ -31,7 +31,7 @@ function MerkleTreeVisualization({
   const shortHash = (hash: string) => hash.substring(0, 8) + '...'
   const proofSet = new Set(proofPath || [])
 
-  // 将树转换为层级数组便于渲染
+  // Convert the tree into level arrays for rendering
   const getLevels = (node: TreeNode | null): TreeNode[][] => {
     if (!node) return []
 
@@ -53,7 +53,7 @@ function MerkleTreeVisualization({
 
   const levels = getLevels(tree)
 
-  // 判断节点类型
+  // Determine the node type
   const getNodeStyle = (hash: string, levelIndex: number, levels: TreeNode[][]) => {
     const isRoot = levelIndex === 0
     const isLeaf = levelIndex === levels.length - 1
@@ -72,18 +72,18 @@ function MerkleTreeVisualization({
     return 'bg-slate-700 border-slate-600 text-slate-400'
   }
 
-  // 获取层级标签
+  // Get the label for each level
   const getLevelLabel = (levelIndex: number, totalLevels: number) => {
     if (levelIndex === 0) return 'Merkle Root'
-    if (levelIndex === totalLevels - 1) return `叶子节点 (${txCount} 笔交易)`
-    return `第 ${levelIndex} 层`
+    if (levelIndex === totalLevels - 1) return `Leaf Nodes (${txCount} transactions)`
+    return `Level ${levelIndex}`
   }
 
   if (!tree) {
     return (
       <div className="bg-slate-900 rounded-xl p-12 text-center">
         <TreeDeciduous className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-        <p className="text-slate-500">验证后将显示完整 Merkle 树结构</p>
+        <p className="text-slate-500">The complete Merkle tree will appear after verification</p>
       </div>
     )
   }
@@ -92,19 +92,19 @@ function MerkleTreeVisualization({
     <div className="bg-gradient-to-b from-slate-900 to-slate-800 rounded-xl p-6 overflow-x-auto">
       <div className="flex items-center gap-2 mb-6">
         <TreeDeciduous className="w-5 h-5 text-emerald-400" />
-        <h3 className="text-lg font-semibold text-white">Merkle 树结构</h3>
+        <h3 className="text-lg font-semibold text-white">Merkle Tree Structure</h3>
       </div>
 
-      {/* 完整树形图 */}
+      {/* Complete tree diagram */}
       <div className="flex flex-col items-center gap-4 min-w-fit">
         {levels.map((level, levelIndex) => (
           <div key={levelIndex} className="flex flex-col items-center">
-            {/* 层级标签 */}
+            {/* Level label */}
             <div className="text-xs text-slate-500 mb-2">
               {getLevelLabel(levelIndex, levels.length)}
             </div>
 
-            {/* 当前层的节点 */}
+            {/* Nodes at the current level */}
             <div className="flex gap-3 flex-wrap justify-center">
               {level.map((node, nodeIndex) => (
                 <div key={`${levelIndex}-${nodeIndex}`} className="flex flex-col items-center">
@@ -118,13 +118,13 @@ function MerkleTreeVisualization({
                   >
                     {shortHash(node.hash)}
                   </div>
-                  {/* 叶子节点显示交易编号 */}
+                  {/* Show transaction numbers for leaf nodes */}
                   {levelIndex === levels.length - 1 && (
                     <div className="text-xs text-slate-500 mt-1">TX #{nodeIndex}</div>
                   )}
-                  {/* 目标节点标记 */}
+                  {/* Target node marker */}
                   {node.hash === targetLeafHash && (
-                    <div className="text-xs text-yellow-400 mt-1">← 目标</div>
+                    <div className="text-xs text-yellow-400 mt-1">← Target</div>
                   )}
                 </div>
               ))}
@@ -133,15 +133,15 @@ function MerkleTreeVisualization({
         ))}
       </div>
 
-      {/* 图例 */}
+      {/* Legend */}
       <div className="mt-6 pt-4 border-t border-slate-700 flex flex-wrap gap-4 justify-center text-xs">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-yellow-500/30 border-2 border-yellow-400"></div>
-          <span className="text-slate-400">目标交易</span>
+          <span className="text-slate-400">Target Transaction</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-purple-500/30 border-2 border-purple-400"></div>
-          <span className="text-slate-400">验证路径节点</span>
+          <span className="text-slate-400">Proof Path Node</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-emerald-500/30 border-2 border-emerald-400"></div>
@@ -149,7 +149,7 @@ function MerkleTreeVisualization({
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-slate-700 border-2 border-slate-600"></div>
-          <span className="text-slate-400">其他节点</span>
+          <span className="text-slate-400">Other Node</span>
         </div>
       </div>
     </div>
@@ -174,13 +174,13 @@ export default function MerkleVerifier() {
       const res = await blockchainAPI.getBlockchain()
       setBlocks(res.data.chain)
     } catch (err) {
-      console.error('加载区块失败:', err)
+      console.error('Unable to load blocks:', err)
     }
   }
 
   const handleVerify = async () => {
     if (selectedBlockIndex === null || !selectedTxId) {
-      alert('请选择区块和交易')
+      alert('Select a block and transaction')
       return
     }
 
@@ -195,7 +195,7 @@ export default function MerkleVerifier() {
 
       setResult(res.data)
     } catch (err: any) {
-      alert('验证失败: ' + (err.error || '未知错误'))
+      alert('Verification failed: ' + (err.error || 'Unknown error'))
     } finally {
       setVerifying(false)
     }
@@ -205,45 +205,48 @@ export default function MerkleVerifier() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Merkle 验证器</h1>
+      <h1 className="text-3xl font-bold">Merkle Proof Verifier</h1>
 
-      {/* 概念说明卡片 */}
+      {/* Concept overview */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-blue-800 mb-3">
-          什么是 Merkle 树？
+          What Is a Merkle Tree?
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="text-sm text-blue-700 space-y-2">
             <p>
-              Merkle 树是一种<strong>二叉哈希树</strong>
-              ，用于高效验证数据的完整性。
+              A Merkle tree is a <strong>binary hash tree</strong> used to
+              verify data integrity efficiently.
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>叶子节点是各个交易的哈希值</li>
-              <li>父节点是两个子节点哈希的组合哈希</li>
-              <li>根节点（Merkle Root）代表所有交易的摘要</li>
+              <li>Each leaf node contains a transaction hash</li>
+              <li>Each parent combines and hashes its two child hashes</li>
+              <li>The Merkle root summarizes every transaction</li>
             </ul>
           </div>
           <div className="text-sm text-blue-700 space-y-2">
             <p>
-              <strong>优势：</strong>只需提供少量哈希值（O(log n)）即可验证任一交易是否在区块中。
+              <strong>Benefit:</strong> A small set of hashes (O(log n)) can
+              prove that a transaction belongs to a block.
             </p>
             <p>
-              <strong>应用：</strong>SPV（简单支付验证）钱包可以不下载完整区块，只需 Merkle 证明即可验证交易。
+              <strong>Use case:</strong> SPV (Simplified Payment Verification)
+              wallets can verify transactions with a Merkle proof without
+              downloading the full block.
             </p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左侧：选择器和结果 */}
+        {/* Left panel: selectors and result */}
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            <h2 className="text-xl font-semibold">选择验证目标</h2>
+            <h2 className="text-xl font-semibold">Select a Verification Target</h2>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                选择区块
+                Select Block
               </label>
               <select
                 value={selectedBlockIndex ?? ''}
@@ -256,10 +259,10 @@ export default function MerkleVerifier() {
                 }}
                 className="w-full p-2 border border-gray-300 rounded"
               >
-                <option value="">请选择区块</option>
+                <option value="">Choose a block</option>
                 {blocks.map((block) => (
                   <option key={block.index} value={block.index}>
-                    #{block.index} - {block.transactions.length} 笔交易
+                    #{block.index} - {block.transactions.length} transactions
                   </option>
                 ))}
               </select>
@@ -268,7 +271,7 @@ export default function MerkleVerifier() {
             {selectedBlock && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择交易
+                  Select Transaction
                 </label>
                 <select
                   value={selectedTxId}
@@ -278,7 +281,7 @@ export default function MerkleVerifier() {
                   }}
                   className="w-full p-2 border border-gray-300 rounded"
                 >
-                  <option value="">请选择交易</option>
+                  <option value="">Choose a transaction</option>
                   {selectedBlock.transactions.map((tx, idx) => (
                     <option key={tx.id} value={tx.id}>
                       TX #{idx}: {tx.id.substring(0, 20)}...
@@ -294,11 +297,11 @@ export default function MerkleVerifier() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
               <GitBranch className="w-4 h-4" />
-              {verifying ? '验证中...' : '验证 Merkle 证明'}
+              {verifying ? 'Verifying...' : 'Verify Merkle Proof'}
             </button>
           </div>
 
-          {/* 验证结果 */}
+          {/* Verification result */}
           {result && (
             <div
               className={`border rounded-lg p-6 ${
@@ -312,14 +315,14 @@ export default function MerkleVerifier() {
                   <>
                     <CheckCircle className="w-6 h-6 text-green-600" />
                     <h3 className="text-lg font-semibold text-green-800">
-                      验证成功 ✓
+                      Verification Successful ✓
                     </h3>
                   </>
                 ) : (
                   <>
                     <XCircle className="w-6 h-6 text-red-600" />
                     <h3 className="text-lg font-semibold text-red-800">
-                      验证失败 ✗
+                      Verification Failed ✗
                     </h3>
                   </>
                 )}
@@ -327,13 +330,13 @@ export default function MerkleVerifier() {
 
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-gray-600">区块索引:</span>
+                  <span className="text-gray-600">Block Index:</span>
                   <span className="ml-2 font-bold">#{result.blockIndex}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">证明路径长度:</span>
+                  <span className="text-gray-600">Proof Path Length:</span>
                   <span className="ml-2 font-bold">
-                    {result.proof.length} 步
+                    {result.proof.length} steps
                   </span>
                 </div>
                 <div>
@@ -347,14 +350,14 @@ export default function MerkleVerifier() {
           )}
         </div>
 
-        {/* 右侧：原理图解 */}
+        {/* Right panel: proof diagram */}
         <div className="lg:col-span-2">
           <div className="bg-white border border-gray-200 rounded-lg p-6 h-full">
-            <h3 className="text-lg font-semibold mb-4">Merkle 证明原理</h3>
+            <h3 className="text-lg font-semibold mb-4">How Merkle Proofs Work</h3>
             <div className="relative">
               <pre className="text-xs font-mono text-gray-600 bg-gray-50 p-4 rounded overflow-x-auto">
                 {`                    ┌─────────────┐
-                    │ Merkle Root │  ← 存储在区块头
+                    │ Merkle Root │  ← Stored in block header
                     └──────┬──────┘
                            │
               ┌────────────┴────────────┐
@@ -369,15 +372,15 @@ export default function MerkleVerifier() {
     │ H(A)│       │ H(B)│     │ H(C)│       │ H(D)│
     └─────┘       └─────┘     └─────┘       └─────┘
 
-验证 TX B 只需要: H(A) + H(CD) = 2 个哈希值
-而不需要知道 TX A, TX C, TX D 的完整内容`}
+Verifying TX B requires only H(A) + H(CD) = 2 hashes
+The full contents of TX A, TX C, and TX D are not required`}
               </pre>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 底部：完整树形可视化（全宽） */}
+      {/* Full-width tree visualization */}
       <MerkleTreeVisualization
         tree={result?.tree || null}
         targetLeafHash={result?.targetLeafHash}
