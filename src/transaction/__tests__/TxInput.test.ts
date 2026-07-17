@@ -1,8 +1,8 @@
 import {TxInput} from '../TxInput'
 
 describe('TxInput', () => {
-  describe('构造函数', () => {
-    it('应该创建未签名的交易输入', () => {
+  describe('constructor', () => {
+    it('creates an unsigned transaction input', () => {
       const input = new TxInput('tx123', 0)
 
       expect(input.txId).toBe('tx123')
@@ -11,7 +11,7 @@ describe('TxInput', () => {
       expect(input.publicKey).toBe('')
     })
 
-    it('应该创建已签名的交易输入', () => {
+    it('creates a signed transaction input', () => {
       const input = new TxInput('tx456', 1, 'sig123', 'pubkey456')
 
       expect(input.txId).toBe('tx456')
@@ -20,27 +20,27 @@ describe('TxInput', () => {
       expect(input.publicKey).toBe('pubkey456')
     })
 
-    it('应该拒绝空交易 ID', () => {
+    it('rejects an empty transaction ID', () => {
       expect(() => {
         new TxInput('', 0)
-      }).toThrow('交易 ID 不能为空')
+      }).toThrow('Transaction ID cannot be empty')
     })
 
-    it('应该拒绝只包含空格的交易 ID', () => {
+    it('rejects a whitespace-only transaction ID', () => {
       expect(() => {
         new TxInput('   ', 0)
-      }).toThrow('交易 ID 不能为空')
+      }).toThrow('Transaction ID cannot be empty')
     })
 
-    it('应该拒绝负的输出索引', () => {
+    it('rejects a negative output index', () => {
       expect(() => {
         new TxInput('tx789', -1)
-      }).toThrow('输出索引不能为负数')
+      }).toThrow('Output index cannot be negative')
     })
   })
 
   describe('setSignature', () => {
-    it('应该设置签名和公钥', () => {
+    it('sets the signature and public key', () => {
       const input = new TxInput('tx123', 0)
 
       input.setSignature('new_sig', 'new_pubkey')
@@ -51,19 +51,19 @@ describe('TxInput', () => {
   })
 
   describe('isSigned', () => {
-    it('未签名的输入应该返回 false', () => {
+    it('returns false for an unsigned input', () => {
       const input = new TxInput('tx123', 0)
 
       expect(input.isSigned()).toBe(false)
     })
 
-    it('已签名的输入应该返回 true', () => {
+    it('returns true for a signed input', () => {
       const input = new TxInput('tx123', 0, 'sig', 'pubkey')
 
       expect(input.isSigned()).toBe(true)
     })
 
-    it('设置签名后应该返回 true', () => {
+    it('returns true after setting a signature', () => {
       const input = new TxInput('tx123', 0)
 
       input.setSignature('sig', 'pubkey')
@@ -73,7 +73,7 @@ describe('TxInput', () => {
   })
 
   describe('toJSON', () => {
-    it('应该正确序列化为 JSON', () => {
+    it('serializes to JSON', () => {
       const input = new TxInput('tx_abc', 2, 'signature', 'public_key')
       const json = input.toJSON()
 
@@ -85,7 +85,7 @@ describe('TxInput', () => {
       })
     })
 
-    it('未签名的输入应该包含空签名', () => {
+    it('includes empty signature fields for an unsigned input', () => {
       const input = new TxInput('tx_xyz', 0)
       const json = input.toJSON()
 
@@ -95,7 +95,7 @@ describe('TxInput', () => {
   })
 
   describe('fromJSON', () => {
-    it('应该从完整 JSON 反序列化', () => {
+    it('deserializes from complete JSON data', () => {
       const json = {
         txId: 'tx_def',
         outputIndex: 3,
@@ -111,7 +111,7 @@ describe('TxInput', () => {
       expect(input.publicKey).toBe('my_pubkey')
     })
 
-    it('应该处理缺少签名字段的 JSON', () => {
+    it('handles JSON data without signature fields', () => {
       const json = {
         txId: 'tx_ghi',
         outputIndex: 1
@@ -126,8 +126,8 @@ describe('TxInput', () => {
     })
   })
 
-  describe('JSON 往返', () => {
-    it('序列化后反序列化应该得到相同数据', () => {
+  describe('JSON round trip', () => {
+    it('preserves data through serialization and deserialization', () => {
       const original = new TxInput('tx_original', 5, 'orig_sig', 'orig_pub')
 
       const json = original.toJSON()
@@ -141,7 +141,7 @@ describe('TxInput', () => {
   })
 
   describe('toStringForSigning', () => {
-    it('应该返回不包含签名的字符串', () => {
+    it('returns a string without signature data', () => {
       const input = new TxInput('transaction_abc', 1, 'my_signature', 'my_publickey')
       const str = input.toStringForSigning()
 
@@ -158,7 +158,7 @@ describe('TxInput', () => {
   })
 
   describe('toString', () => {
-    it('应该返回包含所有字段的 JSON 字符串', () => {
+    it('returns a JSON string containing every field', () => {
       const input = new TxInput('tx_full', 2, 'full_sig', 'full_pub')
       const str = input.toString()
 
@@ -173,14 +173,14 @@ describe('TxInput', () => {
   })
 
   describe('getUTXOKey', () => {
-    it('应该返回正确格式的 UTXO 键', () => {
+    it('returns a correctly formatted UTXO key', () => {
       const input = new TxInput('transaction_id', 7)
       const key = input.getUTXOKey()
 
       expect(key).toBe('transaction_id:7')
     })
 
-    it('不同输入应该有不同的键', () => {
+    it('returns distinct keys for different inputs', () => {
       const input1 = new TxInput('tx1', 0)
       const input2 = new TxInput('tx1', 1)
       const input3 = new TxInput('tx2', 0)
@@ -192,7 +192,7 @@ describe('TxInput', () => {
   })
 
   describe('clone', () => {
-    it('应该创建副本', () => {
+    it('creates a copy', () => {
       const original = new TxInput('clone_tx', 4, 'clone_sig', 'clone_pub')
       const cloned = original.clone()
 
@@ -204,5 +204,4 @@ describe('TxInput', () => {
     })
   })
 })
-
 
