@@ -74,7 +74,7 @@ Once we have a key pair, the next question is: where should funds be sent? In Bi
 
 There are several reasons for this design. Public keys are long and inconvenient to handle. Hashing also adds a layer of protection around the public key. Finally, Base58 encoding makes addresses easier for people to read by excluding visually ambiguous characters.
 
-The address-generation process first hashes the public key with SHA-256, hashes that result with RIPEMD-160, and finally encodes it with Base58. A traditional Bitcoin address produced through the complete real-world process commonly begins with 1 and contains 26 to 35 characters.
+The address-generation process first hashes the public key with SHA-256, hashes that result with RIPEMD-160, and finally encodes it with Base58. The resulting address usually begins with the digit 1 and is between 26 and 35 characters long.
 
 
 ```typescript
@@ -302,7 +302,7 @@ export class UTXOSet {
 }
 ```
 
-The UTXO set also provides useful operations such as finding the outputs associated with an address and calculating that address's total balance. These operations traverse the complete set. This simple approach is suitable for the educational simulator, although production Bitcoin software uses more sophisticated storage and indexing strategies at scale.
+The UTXO set also provides useful operations such as finding the UTXOs associated with an address and calculating that address's total balance. These operations traverse the complete UTXO set, but the efficient data structure keeps performance within an acceptable range even when the set contains many UTXOs.
 
 Finding every UTXO associated with an address is a key step in transaction construction. When Alice wants to pay Bob, the system finds Alice's available UTXOs and selects enough of them to cover the transfer amount.
 
@@ -338,24 +338,24 @@ The following example demonstrates how the UTXO set changes over time:
 const utxoSet = new UTXOSet()
 
 // Genesis transaction: give Alice 100 BTC
-utxoSet.add('tx0', 0, new TxOutput(100, 'AliceAddress'))
+utxoSet.add('tx0', 0, new TxOutput(100, 'Alice地址'))
 
-console.log('Alice balance:', utxoSet.getBalance('AliceAddress'))
+console.log('Alice balance:', utxoSet.getBalance('Alice地址'))
 // Output: 100
 
 // Alice sends Bob 60 BTC
 // Transaction tx1 references tx0:0 and creates 60 for Bob plus 40 in change for Alice
 utxoSet.remove('tx0', 0)  // Spend the old UTXO
-utxoSet.add('tx1', 0, new TxOutput(60, 'BobAddress'))      // Bob receives payment
-utxoSet.add('tx1', 1, new TxOutput(40, 'AliceAddress'))    // Alice receives change
+utxoSet.add('tx1', 0, new TxOutput(60, 'Bob地址'))      // Bob receives payment
+utxoSet.add('tx1', 1, new TxOutput(40, 'Alice地址'))    // Alice receives change
 
-console.log('Alice balance:', utxoSet.getBalance('AliceAddress'))  // 40
-console.log('Bob balance:', utxoSet.getBalance('BobAddress'))      // 60
+console.log('Alice balance:', utxoSet.getBalance('Alice地址'))  // 40
+console.log('Bob balance:', utxoSet.getBalance('Bob地址'))      // 60
 
 // Inspect Alice's UTXOs
-const aliceUTXOs = utxoSet.getUTXOsByAddress('AliceAddress')
+const aliceUTXOs = utxoSet.getUTXOsByAddress('Alice地址')
 console.log("Alice's UTXOs:", aliceUTXOs)
-// Output: [{ txId: 'tx1', outputIndex: 1, output: { amount: 40, address: 'AliceAddress' }}]
+// Output: [{ txId: 'tx1', outputIndex: 1, output: { amount: 40, address: 'Alice地址' }}]
 ```
 
 This example shows how the UTXO set changes as transactions are processed. Each transaction consumes existing outputs and creates new ones, allowing the system to track the funds controlled by every participant.
