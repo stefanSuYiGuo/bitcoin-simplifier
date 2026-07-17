@@ -8,8 +8,8 @@ describe('UTXOSet', () => {
     utxoSet = new UTXOSet()
   })
 
-  describe('add 和 get', () => {
-    it('应该能够添加和获取 UTXO', () => {
+  describe('add and get', () => {
+    it('adds and retrieves a UTXO', () => {
       const output = new TxOutput(50, 'alice')
 
       utxoSet.add('tx1', 0, output)
@@ -20,7 +20,7 @@ describe('UTXOSet', () => {
       expect(retrieved?.address).toBe('alice')
     })
 
-    it('获取不存在的 UTXO 应该返回 undefined', () => {
+    it('returns undefined for a missing UTXO', () => {
       const output = utxoSet.get('nonexistent', 0)
 
       expect(output).toBeUndefined()
@@ -28,20 +28,20 @@ describe('UTXOSet', () => {
   })
 
   describe('has', () => {
-    it('存在的 UTXO 应该返回 true', () => {
+    it('returns true for an existing UTXO', () => {
       const output = new TxOutput(100, 'bob')
       utxoSet.add('tx2', 1, output)
 
       expect(utxoSet.has('tx2', 1)).toBe(true)
     })
 
-    it('不存在的 UTXO 应该返回 false', () => {
+    it('returns false for a missing UTXO', () => {
       expect(utxoSet.has('tx999', 0)).toBe(false)
     })
   })
 
   describe('remove', () => {
-    it('应该能够移除 UTXO', () => {
+    it('removes a UTXO', () => {
       const output = new TxOutput(75, 'carol')
       utxoSet.add('tx3', 0, output)
 
@@ -51,7 +51,7 @@ describe('UTXOSet', () => {
       expect(utxoSet.has('tx3', 0)).toBe(false)
     })
 
-    it('移除不存在的 UTXO 应该返回 false', () => {
+    it('returns false when removing a missing UTXO', () => {
       const removed = utxoSet.remove('tx999', 0)
 
       expect(removed).toBe(false)
@@ -66,7 +66,7 @@ describe('UTXOSet', () => {
       utxoSet.add('tx3', 0, new TxOutput(100, 'carol'))
     })
 
-    it('应该返回指定地址的所有 UTXO', () => {
+    it('returns every UTXO for an address', () => {
       const aliceUTXOs = utxoSet.getUTXOsByAddress('alice')
 
       expect(aliceUTXOs).toHaveLength(2)
@@ -74,7 +74,7 @@ describe('UTXOSet', () => {
       expect(aliceUTXOs[1].output.address).toBe('alice')
     })
 
-    it('应该返回正确的 txId 和 outputIndex', () => {
+    it('returns the correct transaction IDs and output indexes', () => {
       const aliceUTXOs = utxoSet.getUTXOsByAddress('alice')
 
       const utxo1 = aliceUTXOs.find(u => u.txId === 'tx1' && u.outputIndex === 0)
@@ -86,7 +86,7 @@ describe('UTXOSet', () => {
       expect(utxo2?.output.amount).toBe(20)
     })
 
-    it('不存在的地址应该返回空数组', () => {
+    it('returns an empty array for an unknown address', () => {
       const utxos = utxoSet.getUTXOsByAddress('unknown')
 
       expect(utxos).toEqual([])
@@ -101,17 +101,17 @@ describe('UTXOSet', () => {
       utxoSet.add('tx3', 0, new TxOutput(100, 'carol'))
     })
 
-    it('应该正确计算余额', () => {
+    it('calculates balances correctly', () => {
       expect(utxoSet.getBalance('alice')).toBe(70)
       expect(utxoSet.getBalance('bob')).toBe(30)
       expect(utxoSet.getBalance('carol')).toBe(100)
     })
 
-    it('不存在的地址余额应该为 0', () => {
+    it('returns zero for an unknown address', () => {
       expect(utxoSet.getBalance('unknown')).toBe(0)
     })
 
-    it('移除 UTXO 后余额应该减少', () => {
+    it('reduces the balance after removing a UTXO', () => {
       utxoSet.remove('tx1', 0)
 
       expect(utxoSet.getBalance('alice')).toBe(20)
@@ -119,11 +119,11 @@ describe('UTXOSet', () => {
   })
 
   describe('size', () => {
-    it('空集合大小应该为 0', () => {
+    it('returns zero for an empty set', () => {
       expect(utxoSet.size()).toBe(0)
     })
 
-    it('应该正确返回 UTXO 数量', () => {
+    it('returns the number of UTXOs', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
       utxoSet.add('tx2', 0, new TxOutput(20, 'alice'))
@@ -131,7 +131,7 @@ describe('UTXOSet', () => {
       expect(utxoSet.size()).toBe(3)
     })
 
-    it('移除 UTXO 后大小应该减少', () => {
+    it('decreases after removing a UTXO', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
 
@@ -142,7 +142,7 @@ describe('UTXOSet', () => {
   })
 
   describe('clear', () => {
-    it('应该清空所有 UTXO', () => {
+    it('removes every UTXO', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
 
@@ -155,7 +155,7 @@ describe('UTXOSet', () => {
   })
 
   describe('clone', () => {
-    it('应该创建副本', () => {
+    it('creates a copy', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
 
@@ -166,7 +166,7 @@ describe('UTXOSet', () => {
       expect(cloned.has('tx1', 1)).toBe(true)
     })
 
-    it('修改副本不应该影响原始集合', () => {
+    it('keeps the original set unchanged when modifying a copy', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
 
       const cloned = utxoSet.clone()
@@ -178,14 +178,14 @@ describe('UTXOSet', () => {
     })
   })
 
-  describe('JSON 序列化', () => {
+  describe('JSON serialization', () => {
     beforeEach(() => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
       utxoSet.add('tx2', 0, new TxOutput(20, 'carol'))
     })
 
-    it('应该能够导出为 JSON', () => {
+    it('exports to JSON-compatible data', () => {
       const json = utxoSet.toJSON()
 
       expect(json).toHaveLength(3)
@@ -194,7 +194,7 @@ describe('UTXOSet', () => {
       expect(json[0]).toHaveProperty('output')
     })
 
-    it('应该能够从 JSON 导入', () => {
+    it('imports from JSON-compatible data', () => {
       const json = utxoSet.toJSON()
       const restored = UTXOSet.fromJSON(json)
 
@@ -204,7 +204,7 @@ describe('UTXOSet', () => {
       expect(restored.has('tx2', 0)).toBe(true)
     })
 
-    it('导出导入后数据应该一致', () => {
+    it('preserves data across export and import', () => {
       const json = utxoSet.toJSON()
       const restored = UTXOSet.fromJSON(json)
 
@@ -215,7 +215,7 @@ describe('UTXOSet', () => {
   })
 
   describe('getAll', () => {
-    it('应该返回所有 UTXO 的副本', () => {
+    it('returns a copy of every UTXO', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
       utxoSet.add('tx1', 1, new TxOutput(30, 'bob'))
 
@@ -226,7 +226,7 @@ describe('UTXOSet', () => {
       expect(all.get('tx1:1')).toBeDefined()
     })
 
-    it('修改返回的 Map 不应该影响原始集合', () => {
+    it('keeps the original set unchanged when modifying the returned map', () => {
       utxoSet.add('tx1', 0, new TxOutput(50, 'alice'))
 
       const all = utxoSet.getAll()
@@ -236,5 +236,4 @@ describe('UTXOSet', () => {
     })
   })
 })
-
 
