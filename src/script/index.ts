@@ -1,5 +1,5 @@
 /**
- * 脚本系统模块导出
+ * Public exports for the script system.
  */
 
 export {
