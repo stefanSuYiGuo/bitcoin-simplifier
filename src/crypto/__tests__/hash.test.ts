@@ -2,7 +2,7 @@ import {Hash} from '../hash'
 
 describe('Hash', () => {
   describe('sha256', () => {
-    it('应该正确计算 SHA-256 哈希', () => {
+    it('calculates a SHA-256 hash correctly', () => {
       const data = 'hello world'
       const hash = Hash.sha256(data)
 
@@ -12,7 +12,7 @@ describe('Hash', () => {
       expect(hash).toHaveLength(64)
     })
 
-    it('对相同输入应产生相同哈希', () => {
+    it('produces the same hash for identical input', () => {
       const data = 'test data'
       const hash1 = Hash.sha256(data)
       const hash2 = Hash.sha256(data)
@@ -20,14 +20,14 @@ describe('Hash', () => {
       expect(hash1).toBe(hash2)
     })
 
-    it('对不同输入应产生不同哈希', () => {
+    it('produces different hashes for different input', () => {
       const hash1 = Hash.sha256('data1')
       const hash2 = Hash.sha256('data2')
 
       expect(hash1).not.toBe(hash2)
     })
 
-    it('应该处理空字符串', () => {
+    it('handles an empty string', () => {
       const hash = Hash.sha256('')
 
       expect(hash).toBe(
@@ -37,19 +37,19 @@ describe('Hash', () => {
   })
 
   describe('doubleSha256', () => {
-    it('应该正确计算双重 SHA-256 哈希', () => {
+    it('calculates a double SHA-256 hash correctly', () => {
       const data = 'hello'
       const hash = Hash.doubleSha256(data)
 
       expect(hash).toHaveLength(64)
 
-      // 验证确实是两次哈希
+      // Verify that hashing is performed twice
       const firstHash = Hash.sha256(data)
       const expectedHash = Hash.sha256(firstHash)
       expect(hash).toBe(expectedHash)
     })
 
-    it('双重哈希应不同于单次哈希', () => {
+    it('produces a double hash that differs from a single hash', () => {
       const data = 'test'
       const singleHash = Hash.sha256(data)
       const doubleHash = Hash.doubleSha256(data)
@@ -59,7 +59,7 @@ describe('Hash', () => {
   })
 
   describe('ripemd160', () => {
-    it('应该正确计算 RIPEMD-160 哈希', () => {
+    it('calculates a RIPEMD-160 hash correctly', () => {
       const data = 'hello world'
       const hash = Hash.ripemd160(data)
 
@@ -69,14 +69,14 @@ describe('Hash', () => {
   })
 
   describe('hashObject', () => {
-    it('应该正确计算对象的哈希', () => {
+    it('calculates an object hash correctly', () => {
       const obj = {name: 'Alice', amount: 100}
       const hash = Hash.hashObject(obj)
 
       expect(hash).toHaveLength(64)
     })
 
-    it('相同对象应产生相同哈希', () => {
+    it('produces the same hash for identical objects', () => {
       const obj1 = {a: 1, b: 2}
       const obj2 = {a: 1, b: 2}
 
@@ -86,7 +86,7 @@ describe('Hash', () => {
       expect(hash1).toBe(hash2)
     })
 
-    it('不同对象应产生不同哈希', () => {
+    it('produces different hashes for different objects', () => {
       const obj1 = {a: 1}
       const obj2 = {a: 2}
 
@@ -96,15 +96,15 @@ describe('Hash', () => {
       expect(hash1).not.toBe(hash2)
     })
 
-    it('属性顺序不同应产生不同哈希', () => {
-      // JSON.stringify 会保持属性插入顺序
+    it('produces different hashes when property order differs', () => {
+      // JSON.stringify preserves property insertion order
       const obj1 = JSON.parse('{"a":1,"b":2}')
       const obj2 = JSON.parse('{"b":2,"a":1}')
 
       const hash1 = Hash.hashObject(obj1)
       const hash2 = Hash.hashObject(obj2)
 
-      // 因为 JSON.stringify 的顺序不同，哈希也不同
+      // Different JSON.stringify output produces different hashes
       expect(hash1).not.toBe(hash2)
     })
   })
