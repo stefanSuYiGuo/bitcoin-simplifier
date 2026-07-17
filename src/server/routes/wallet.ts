@@ -8,7 +8,7 @@ const state = ServerState.getInstance()
 
 /**
  * GET /api/wallets
- * 获取所有钱包
+ * Get all wallets.
  */
 router.get('/wallets', (req: Request, res: Response) => {
   try {
@@ -33,14 +33,14 @@ router.get('/wallets', (req: Request, res: Response) => {
 
 /**
  * POST /api/wallets
- * 创建新钱包
+ * Create a wallet.
  */
 router.post('/wallets', (req: Request, res: Response) => {
   try {
     const wallet = new Wallet()
     state.wallets.set(wallet.address, wallet)
     
-    // 为新钱包创建矿工实例
+    // Create a miner instance for the new wallet
     const miner = new Miner(wallet, state.blockchain)
     state.miners.set(wallet.address, miner)
     
@@ -65,7 +65,7 @@ router.post('/wallets', (req: Request, res: Response) => {
 
 /**
  * GET /api/wallets/:address
- * 获取钱包详情
+ * Get wallet details.
  */
 router.get('/wallets/:address', (req: Request, res: Response) => {
   try {
@@ -75,7 +75,7 @@ router.get('/wallets/:address', (req: Request, res: Response) => {
     if (!wallet) {
       return res.status(404).json({
         success: false,
-        error: '钱包不存在',
+        error: 'Wallet not found',
       })
     }
     
@@ -100,7 +100,7 @@ router.get('/wallets/:address', (req: Request, res: Response) => {
 
 /**
  * GET /api/wallets/:address/balance
- * 获取钱包余额
+ * Get a wallet balance.
  */
 router.get('/wallets/:address/balance', (req: Request, res: Response) => {
   try {
@@ -125,7 +125,7 @@ router.get('/wallets/:address/balance', (req: Request, res: Response) => {
 
 /**
  * GET /api/wallets/:address/utxos
- * 获取钱包的所有 UTXO
+ * Get all UTXOs for a wallet.
  */
 router.get('/wallets/:address/utxos', (req: Request, res: Response) => {
   try {
