@@ -1,88 +1,88 @@
-# 实现一个简单的比特币：Part 2 - 交易系统
+# Building a Simple Bitcoin: Part 2 - The Transaction System
 
-在上一篇文章中，我们实现了比特币的基础组件：密码学工具、钱包系统和 UTXO 模型。这些是比特币的基石，但要让比特币真正运转起来，我们还需要一个核心组件：交易系统。
+In the previous article, we implemented the foundational components of Bitcoin: cryptographic utilities, wallets, and the UTXO model. These are essential building blocks, but a functioning Bitcoin system also needs a transaction system.
 
-今天我们将深入探讨如何实现一个完整的交易系统，包括交易的构建、签名、验证，以及最重要的 UTXO 选择和找零机制。
+This article explores how to implement a complete transaction system, including transaction construction, signing, validation, UTXO selection, and change handling.
 
-## 一、为什么需要交易系统
+## 1. Why a Transaction System Is Necessary
 
-在传统的银行系统中，转账很简单：从 A 账户扣除一定金额，向 B 账户增加相同金额。但比特币采用的 UTXO 模型完全不同，它更像是现金交易。
+In a traditional banking system, a transfer is simple: subtract an amount from account A and add the same amount to account B. Bitcoin's UTXO model works differently and more closely resembles a cash transaction.
 
-想象一下现实生活中的场景：你钱包里有一张 100 元、一张 50 元和两张 20 元的纸币。现在你要买 60 元的东西，你会怎么做？你可能会：
+Imagine that your physical wallet contains one 100-unit note, one 50-unit note, and two 20-unit notes. If you want to purchase something for 60 units, you might:
 
-1. 拿出 100 元纸币
-2. 商家收取 60 元
-3. 商家找零 40 元给你
+1. Hand over the 100-unit note
+2. Pay the merchant 60 units
+3. Receive 40 units in change
 
-这个过程中，你原来的 100 元纸币被"花掉"了，取而代之的是商家收到的 60 元和你收到的 40 元找零。
+In this process, the original 100-unit note is spent and replaced by 60 units received by the merchant and 40 units returned to you as change.
 
-比特币的交易系统就是模拟这个过程。每笔交易都需要：
+Bitcoin's transaction system models this process. Every transaction must:
 
-- 选择合适的 UTXO（纸币）
-- 计算找零金额
-- 对交易进行签名证明所有权
-- 让网络验证交易的合法性
+- Select suitable UTXOs, which act like banknotes
+- Calculate the change amount
+- Sign the transaction to demonstrate authorization
+- Allow the network to validate the transaction
 
-## 二、交易的基本结构
+## 2. Basic Transaction Structure
 
-在开始实现之前，我们先理解交易的结构。一笔比特币交易由三个核心部分组成：
+Before implementing the system, we need to understand transaction structure. A Bitcoin transaction has three core components:
 
 ```
-交易 (Transaction)
-├── 交易 ID (txId)
-├── 输入列表 (inputs)
-│   ├── 输入1: 引用的 UTXO + 签名 + 公钥
-│   ├── 输入2: 引用的 UTXO + 签名 + 公钥
+Transaction
+├── Transaction ID (txId)
+├── Input list (inputs)
+│   ├── Input 1: referenced UTXO + signature + public key
+│   ├── Input 2: referenced UTXO + signature + public key
 │   └── ...
-├── 输出列表 (outputs)
-│   ├── 输出1: 金额 + 接收地址
-│   ├── 输出2: 金额 + 接收地址
+├── Output list (outputs)
+│   ├── Output 1: amount + recipient address
+│   ├── Output 2: amount + recipient address
 │   └── ...
-└── 时间戳 (timestamp)
+└── Timestamp
 ```
 
-每个输入都指向一个之前存在的 UTXO，并提供签名来证明你有权花费它。每个输出创建新的 UTXO，可以在未来的交易中被花费。
+Each input references an existing UTXO and provides a signature demonstrating authorization to spend it. Each output creates a new UTXO that can be spent by a future transaction.
 
-让我们看一个具体例子。假设 Alice 有两个 UTXO：
+Consider an example in which Alice owns two UTXOs:
 
-**UTXO 集合（交易前）：**
+**UTXO set before the transaction:**
 
-| UTXO | 金额 | 所有者 | 状态 |
+| UTXO | Amount | Owner | Status |
 |------|------|--------|------|
-| tx1:0 | 100 BTC | Alice | 有效 |
-| tx2:0 | 50 BTC | Alice | 有效 |
+| tx1:0 | 100 BTC | Alice | Unspent |
+| tx2:0 | 50 BTC | Alice | Unspent |
 
-**Alice 想给 Bob 转账 60 BTC，创建新交易：**
+**Alice creates a new transaction to send Bob 60 BTC:**
 
-交易输入：
+Transaction input:
 
-| 引用 UTXO | 金额 | 签名 | 公钥 |
+| Referenced UTXO | Amount | Signature | Public key |
 |----------|------|------|------|
-| tx1:0 | 100 BTC | Alice 的签名 | Alice 的公钥 |
+| tx1:0 | 100 BTC | Alice's signature | Alice's public key |
 
-交易输出：
+Transaction outputs:
 
-| 输出索引 | 金额 | 接收地址 | 说明 |
+| Output index | Amount | Recipient address | Description |
 |---------|------|---------|------|
-| 0 | 60 BTC | Bob 的地址 | 转账 |
-| 1 | 40 BTC | Alice 的地址 | 找零 |
+| 0 | 60 BTC | Bob's address | Payment |
+| 1 | 40 BTC | Alice's address | Change |
 
-**交易完成后，UTXO 集合变成：**
+**UTXO set after the transaction:**
 
-| UTXO | 金额 | 所有者 | 状态 | 说明 |
+| UTXO | Amount | Owner | Status | Description |
 |------|------|--------|------|------|
-| tx1:0 | 100 BTC | Alice | 已花费 | 被新交易消耗 |
-| tx2:0 | 50 BTC | Alice | 有效 | 未使用 |
-| tx3:0 | 60 BTC | Bob | 有效 | 新创建 |
-| tx3:1 | 40 BTC | Alice | 有效 | 找零 |
+| tx1:0 | 100 BTC | Alice | Spent | Consumed by the new transaction |
+| tx2:0 | 50 BTC | Alice | Unspent | Not used |
+| tx3:0 | 60 BTC | Bob | Unspent | Newly created |
+| tx3:1 | 40 BTC | Alice | Unspent | Change |
 
-注意：Alice 原来的 `tx1:0` 被标记为"已花费"，不再存在于 UTXO 集合中。
+Note that Alice's original `tx1:0` is marked as spent and is no longer part of the UTXO set.
 
-## 三、Transaction 类：交易的核心
+## 3. The Transaction Class: The Core of a Transaction
 
-现在让我们实现 `Transaction` 类。这个类需要管理交易的输入、输出，计算交易 ID，并提供验证功能。
+We can now implement the `Transaction` class. It manages inputs and outputs, calculates the transaction ID, and provides validation behavior.
 
-### 3.1 交易的创建
+### 3.1 Creating a Transaction
 
 ```typescript
 export class Transaction {
@@ -97,10 +97,10 @@ export class Transaction {
     timestamp: number = Date.now()
   ) {
     if (inputs.length === 0) {
-      throw new Error('交易必须至少有一个输入')
+      throw new Error('Transaction must have at least one input')
     }
     if (outputs.length === 0) {
-      throw new Error('交易必须至少有一个输出')
+      throw new Error('Transaction must have at least one output')
     }
 
     this.inputs = inputs
@@ -111,11 +111,11 @@ export class Transaction {
 }
 ```
 
-这里的关键点是：交易必须至少有一个输入和一个输出。没有输入意味着没有资金来源，没有输出意味着没有接收者。
+The essential rule is that a transaction must contain at least one input and one output. Without an input there is no source of funds, and without an output there is no recipient.
 
-### 3.2 交易 ID 的计算
+### 3.2 Calculating the Transaction ID
 
-交易 ID 是交易内容的哈希值，它唯一标识一笔交易。重要的是，交易 ID 的计算不应该包含签名，因为签名本身是对交易内容的 hash。如果把签名包含在内，就会形成循环依赖。
+The transaction ID is a hash of the transaction content and uniquely identifies the transaction. In this implementation, the signing content excludes signatures because each signature is itself derived from that content. Including it would create a circular dependency.
 
 ```typescript
 private calculateId(): string {
@@ -139,16 +139,16 @@ getContentForSigning(): string {
 }
 ```
 
-`getContentForSigning()` 方法返回的内容：
-- 包含输入的引用信息（txId 和 outputIndex）
-- 不包含签名和公钥
-- 包含所有输出和时间戳
+The value returned by `getContentForSigning()`:
+- Includes input reference data (`txId` and `outputIndex`)
+- Excludes signatures and public keys
+- Includes every output and the timestamp
 
-这样，无论签名如何变化，交易的内容始终是确定的，交易 ID 也保持不变。
+This keeps the signing content deterministic regardless of signature changes, so the transaction ID remains stable.
 
-### 3.3 金额验证
+### 3.3 Validating Amounts
 
-交易系统有一个基本的经济规则：输入总额必须大于或等于输出总额。差额就是矿工费。
+The transaction system enforces a basic economic rule: total input value must be greater than or equal to total output value. The difference is the mining fee.
 
 ```typescript
 getInputAmount(utxoSet: Map<string, TxOutput>): number {
@@ -157,7 +157,7 @@ getInputAmount(utxoSet: Map<string, TxOutput>): number {
     const key = `${input.txId}:${input.outputIndex}`
     const utxo = utxoSet.get(key)
     if (!utxo) {
-      throw new Error(`UTXO 不存在: ${key}`)
+      throw new Error(`UTXO not found: ${key}`)
     }
     total += utxo.amount
   }
@@ -175,27 +175,27 @@ calculateFee(utxoSet: Map<string, TxOutput>): number {
 }
 ```
 
-让我们通过一个例子理解矿工费：
+The following example illustrates the mining fee:
 
 ```
-输入：
+Inputs:
   UTXO1: 100 BTC
   UTXO2: 50 BTC
-  总计: 150 BTC
+  Total: 150 BTC
 
-输出：
-  给 Bob: 60 BTC
-  找零给自己: 89 BTC
-  总计: 149 BTC
+Outputs:
+  Payment to Bob: 60 BTC
+  Change: 89 BTC
+  Total: 149 BTC
 
-矿工费 = 150 - 149 = 1 BTC
+Mining fee = 150 - 149 = 1 BTC
 ```
 
-这 1 BTC 的差额就是矿工费，奖励给将这笔交易打包进区块的矿工。
+The 1 BTC difference is the fee awarded to the miner who includes the transaction in a block.
 
-### 3.4 Coinbase 交易：特殊的第一笔交易
+### 3.4 Coinbase Transactions: A Special First Transaction
 
-每个区块的第一笔交易是特殊的，它叫做 Coinbase 交易，是矿工的奖励。这笔交易没有真正的输入，因为它凭空创造了新的比特币。
+The first transaction in every block is a special coinbase transaction that pays the miner's reward. It has no conventional input because it creates new bitcoin according to the protocol's issuance rules.
 
 ```typescript
 static createCoinbase(
@@ -223,15 +223,15 @@ isCoinbase(): boolean {
 }
 ```
 
-Coinbase 交易使用一个特殊的全零 txId 作为输入，表示这是新创造的比特币。在真实的比特币网络中，大约每 10 分钟就会产生一个新区块，矿工通过 Coinbase 交易获得区块奖励。
+A coinbase transaction uses a special all-zero transaction ID as its input in this model, indicating newly issued bitcoin. On the real Bitcoin network, a new block is found approximately every ten minutes, and the miner receives the block reward through its coinbase transaction.
 
-## 四、TransactionSigner：签名与验证
+## 4. TransactionSigner: Signing and Verification
 
-有了交易结构，我们需要一套机制来证明交易的合法性。这就是签名和验证的作用。
+With the transaction structure in place, we need a mechanism for demonstrating authorization and validating transactions. This is the purpose of signing and verification.
 
-### 4.1 交易签名
+### 4.1 Signing a Transaction
 
-签名交易就是用私钥对交易内容进行签名，证明你有权花费输入中引用的 UTXO。
+Signing a transaction means using a private key to sign its content, demonstrating authorization to spend the UTXOs referenced by its inputs.
 
 ```typescript
 export class TransactionSigner {
@@ -254,49 +254,49 @@ export class TransactionSigner {
 }
 ```
 
-签名过程很直接：
-1. 获取交易的原始内容（不包含签名）
-2. 对每个未签名的输入进行签名
-3. 将签名和公钥存储在输入中
+The signing process is straightforward:
+1. Obtain the original transaction content without signatures
+2. Sign each unsigned input
+3. Store the signature and public key in the input
 
-让我们看一个实际的签名例子：
+Consider a practical signing example:
 
-**原始交易（未签名）：**
+**Original unsigned transaction:**
 
 ```
-输入：
+Input:
   - txId: tx1
   - outputIndex: 0
-  - signature: (空)
-  - publicKey: (空)
+  - signature: (empty)
+  - publicKey: (empty)
 ```
 
-**签名过程**
+**Signing process**
 ↓
 
-**签名后的交易：**
+**Signed transaction:**
 
 ```
-输入：
+Input:
   - txId: tx1
   - outputIndex: 0
   - signature: 3045...a7b9
   - publicKey: 04f3...c2d1
 ```
 
-### 4.2 交易验证：两层防护
+### 4.2 Transaction Validation: Two Layers of Protection
 
-验证交易是确保网络安全的关键。验证过程包含两个层次：
+Transaction validation is essential to network security. This simplified process contains two layers:
 
-**第一层：验证签名本身是否有效**
+**Layer 1: Verify the signature itself**
 
 ```typescript
 const isSignatureValid = Signature.verify(txData, signature, publicKey)
 ```
 
-这一步验证签名确实是由拥有对应私钥的人创建的。
+This step confirms that the signature was created by someone controlling the corresponding private key.
 
-**第二层：验证公钥是否拥有被引用的 UTXO**
+**Layer 2: Verify that the public key controls the referenced UTXO**
 
 ```typescript
 const sha256Hash = Hash.sha256(input.publicKey)
@@ -308,42 +308,42 @@ if (addressFromPublicKey !== utxo.address) {
 }
 ```
 
-只有两层验证都通过，交易才有效。即使 Bob 能创建有效的签名（第一层通过），如果他的公钥对应的地址不是 UTXO 的所有者，第二层验证就会失败。
+The transaction is valid only if both checks succeed. Bob can create a valid signature with his own key, but the second check fails if the address derived from that public key does not own the referenced UTXO.
 
-让我们通过一个攻击场景来理解这两层防护的重要性：
+The following attack scenario demonstrates why both layers are necessary:
 
-**场景：Bob 试图盗取 Alice 的 UTXO**
+**Scenario: Bob attempts to steal Alice's UTXO**
 
 ```
-Alice 的 UTXO: tx1:0 (100 BTC)
-所有者地址: alice_address
+Alice's UTXO: tx1:0 (100 BTC)
+Owner address: alice_address
 
-Bob 创建一个欺诈交易：
+Bob creates a fraudulent transaction:
 
-输入：
-  - txId: tx1 (Alice 的 UTXO)
+Input:
+  - txId: tx1 (Alice's UTXO)
   - outputIndex: 0
-  - signature: Bob 用自己私钥签名
-  - publicKey: Bob 的公钥
+  - signature: Bob signs with his private key
+  - publicKey: Bob's public key
 
-输出：
-  - 100 BTC → Bob 的地址
+Output:
+  - 100 BTC → Bob's address
 
-验证过程：
-[通过] 第一层：签名验证通过
-        （Bob 的签名对 Bob 的公钥是有效的）
+Validation process:
+[PASS] Layer 1: Signature verification succeeds
+       (Bob's signature is valid for Bob's public key)
 
-[失败] 第二层：所有权验证失败
-        从 Bob 的公钥计算的地址: bob_address
-        UTXO 的所有者地址: alice_address
-        地址不匹配！
+[FAIL] Layer 2: Ownership verification fails
+       Address derived from Bob's public key: bob_address
+       UTXO owner address: alice_address
+       The addresses do not match
 ```
 
-这两层防护确保了：
-1. 交易确实是由持有私钥的人签名的（防止伪造签名）
-2. 签名的人确实拥有被引用的 UTXO（防止盗用他人的 UTXO）
+These two layers ensure that:
+1. The transaction was signed by someone controlling the private key, preventing signature forgery
+2. The signer controls the referenced UTXO, preventing unauthorized spending
 
-完整的验证代码：
+Complete validation code:
 
 ```typescript
 static verifyTransaction(
@@ -361,12 +361,12 @@ static verifyTransaction(
       return false
     }
 
-    // 第一层：验证签名
+    // Layer 1: Verify the signature
     if (!Signature.verify(txData, input.signature, input.publicKey)) {
       return false
     }
 
-    // 第二层：验证所有权
+    // Layer 2: Verify ownership
     const utxoKey = `${input.txId}:${input.outputIndex}`
     const utxo = utxoSet.get(utxoKey)
 
@@ -387,22 +387,22 @@ static verifyTransaction(
 }
 ```
 
-## 五、TransactionBuilder：智能的交易构建器
+## 5. TransactionBuilder: A Convenient Transaction Builder
 
-手动构建交易很繁琐，需要选择 UTXO、计算找零、处理签名。`TransactionBuilder` 类封装了这些复杂性，提供了简洁的 API。
+Constructing transactions manually is tedious because it requires selecting UTXOs, calculating change, and handling signatures. The `TransactionBuilder` class encapsulates this complexity behind a concise API.
 
-### 5.1 使用方式
+### 5.1 Usage
 
-让我们先看看如何使用 TransactionBuilder：
+The following examples show how to use `TransactionBuilder`:
 
 ```typescript
-// 简单转账
+// Simple transfer
 const tx = new TransactionBuilder(utxoSet)
   .from(aliceWallet)
   .to(bobWallet.address, 60)
   .buildAndSign()
 
-// 多人转账
+// Transfer to multiple recipients
 const tx = new TransactionBuilder(utxoSet)
   .from(aliceWallet)
   .to(bobWallet.address, 30)
@@ -410,7 +410,7 @@ const tx = new TransactionBuilder(utxoSet)
   .withChangeAddress(aliceWallet.address)
   .buildAndSign()
 
-// 或使用静态方法
+// Or use the static helper
 const tx = TransactionBuilder.createSimpleTransfer(
   aliceWallet,
   bobWallet.address,
@@ -419,20 +419,20 @@ const tx = TransactionBuilder.createSimpleTransfer(
 )
 ```
 
-这种链式调用的 API 设计让代码既简洁又易读。
+This fluent API keeps transaction-building code concise and readable.
 
-### 5.2 UTXO 选择策略：贪心算法
+### 5.2 UTXO Selection Strategy: A Greedy Algorithm
 
-UTXO 选择是交易构建的核心问题。给定一个目标金额，如何从多个 UTXO 中选择最优的组合？
+UTXO selection is a central transaction-building problem. Given a target amount, how should a wallet choose among several available UTXOs?
 
-我们采用贪心算法：优先选择金额最大的 UTXO，直到满足需求。
+This implementation uses a greedy algorithm that selects the largest UTXOs first until the target is met.
 
 ```typescript
 private selectUTXOs(
   utxos: Array<{txId: string; outputIndex: number; output: TxOutput}>,
   targetAmount: number
 ): Array<{txId: string; outputIndex: number; output: TxOutput}> {
-  // 按金额从大到小排序
+  // Sort by amount in descending order
   const sorted = [...utxos].sort((a, b) => b.output.amount - a.output.amount)
 
   const selected: Array<{
@@ -459,78 +459,78 @@ private selectUTXOs(
 }
 ```
 
-让我们通过例子理解这个算法：
+The following examples illustrate the algorithm:
 
 ```
-场景：Alice 需要支付 60 BTC
+Scenario: Alice needs to pay 60 BTC
 
-Alice 的 UTXO：
+Alice's UTXOs:
   UTXO1: 100 BTC
   UTXO2: 50 BTC
   UTXO3: 25 BTC
   UTXO4: 10 BTC
 
-步骤 1：排序（从大到小）
+Step 1: Sort from largest to smallest
   [100, 50, 25, 10]
 
-步骤 2：选择
-  - 选择 100 BTC
-  - 累计：100 BTC
-  - 100 >= 60，满足条件，停止
+Step 2: Select outputs
+  - Select 100 BTC
+  - Running total: 100 BTC
+  - 100 >= 60, so stop
 
-结果：选择 1 个 UTXO (100 BTC)
-找零：100 - 60 = 40 BTC
+Result: Select one UTXO (100 BTC)
+Change: 100 - 60 = 40 BTC
 ```
 
-如果需要支付 120 BTC：
+If the payment is 120 BTC:
 
 ```
-步骤 1：排序
+Step 1: Sort
   [100, 50, 25, 10]
 
-步骤 2：选择
-  - 选择 100 BTC，累计：100
-  - 100 < 120，继续
-  - 选择 50 BTC，累计：150
-  - 150 >= 120，满足条件，停止
+Step 2: Select outputs
+  - Select 100 BTC; running total: 100
+  - 100 < 120, so continue
+  - Select 50 BTC; running total: 150
+  - 150 >= 120, so stop
 
-结果：选择 2 个 UTXO (100 + 50 = 150 BTC)
-找零：150 - 120 = 30 BTC
+Result: Select two UTXOs (100 + 50 = 150 BTC)
+Change: 150 - 120 = 30 BTC
 ```
 
-这个贪心算法的优点：
-- 简单高效
-- 通常能选择最少数量的 UTXO
-- 减少交易大小（更少的输入意味着更小的交易体积）
+Advantages of this greedy algorithm:
+- Simple and efficient
+- Often selects a small number of UTXOs
+- Reduces transaction size because fewer inputs require less data
 
-### 5.3 完整流程
+### 5.3 Complete Workflow
 
-让我们通过一个完整的例子理解整个流程：
+The following example demonstrates the complete workflow:
 
-**初始状态：**
+**Initial state:**
 
-| UTXO | 金额 | 所有者 |
+| UTXO | Amount | Owner |
 |------|------|--------|
 | tx1:0 | 100 BTC | Alice |
 | tx2:0 | 50 BTC | Alice |
 | tx3:0 | 25 BTC | Alice |
 
-**目标：** Alice 给 Bob 转账 60 BTC
+**Goal:** Alice sends Bob 60 BTC
 
-**步骤 1：选择 UTXO**
+**Step 1: Select UTXOs**
 ```
-选择算法：贪心（从大到小）
-选择：tx1:0 (100 BTC)
+Selection algorithm: greedy, largest first
+Selected: tx1:0 (100 BTC)
 ```
 
-**步骤 2：构建输入**
+**Step 2: Build the inputs**
 ```typescript
 inputs = [
   TxInput(txId: 'tx1', outputIndex: 0)
 ]
 ```
 
-**步骤 3：构建输出**
+**Step 3: Build the outputs**
 ```typescript
 recipients = [
   { address: 'bob_address', amount: 60 }
@@ -541,62 +541,59 @@ outputs = [
 ]
 ```
 
-**步骤 4：计算找零**
+**Step 4: Calculate change**
 ```
 totalInput = 100
 totalOutput = 60
 change = 100 - 60 = 40
 ```
 
-**步骤 5：添加找零输出**
+**Step 5: Add the change output**
 ```typescript
 outputs.push(
   TxOutput(40, 'alice_address')
 )
 ```
 
-**步骤 6：创建交易**
+**Step 6: Create the transaction**
 ```typescript
 tx = new Transaction(inputs, outputs)
 ```
 
-**步骤 7：签名交易**
+**Step 7: Sign the transaction**
 ```typescript
-对每个输入签名
+Sign each input
 input.signature = sign(txData, alice_privateKey)
 input.publicKey = alice_publicKey
 ```
 
-**最终交易 (tx4)：**
+**Final transaction (tx4):**
 
-| 项目 | 内容 |
+| Item | Content |
 |------|------|
 | Transaction ID | tx4 |
-| **输入** | |
-| - tx1:0 | signature: 已签名<br/>publicKey: Alice's PubKey |
-| **输出** | |
-| - 输出 0 | 60 BTC → bob_address |
-| - 输出 1 | 40 BTC → alice_address |
+| **Input** | |
+| - tx1:0 | signature: signed<br/>publicKey: Alice's PubKey |
+| **Outputs** | |
+| - Output 0 | 60 BTC → bob_address |
+| - Output 1 | 40 BTC → alice_address |
 
-执行这笔交易后，UTXO 集合的变化：
+After executing the transaction, the UTXO set changes as follows:
 
-| UTXO | 金额 | 所有者 | 状态 | 说明 |
+| UTXO | Amount | Owner | Status | Description |
 |------|------|--------|------|------|
-| tx1:0 | 100 BTC | Alice | 已花费 | 被 tx4 消耗 |
-| tx2:0 | 50 BTC | Alice | 有效 | 未使用 |
-| tx3:0 | 25 BTC | Alice | 有效 | 未使用 |
-| tx4:0 | 60 BTC | Bob | 有效 | 新创建 |
-| tx4:1 | 40 BTC | Alice | 有效 | 找零 |
+| tx1:0 | 100 BTC | Alice | Spent | Consumed by tx4 |
+| tx2:0 | 50 BTC | Alice | Unspent | Not used |
+| tx3:0 | 25 BTC | Alice | Unspent | Not used |
+| tx4:0 | 60 BTC | Bob | Unspent | Newly created |
+| tx4:1 | 40 BTC | Alice | Unspent | Change |
 
-**最终余额：**
+**Final balances:**
 - Alice: tx2:0 (50) + tx3:0 (25) + tx4:1 (40) = **115 BTC**
 - Bob: tx4:0 (60) = **60 BTC**
 
-## 六、总结
+## 6. Summary
 
-在这篇文章中，我们实现了比特币的交易系统。我们学习了如何构建交易，包括选择 UTXO、计算找零和生成交易 ID。我们探讨了交易签名的两层验证机制：验证签名本身的有效性，以及验证签名者是否真正拥有被引用的 UTXO。我们还实现了 TransactionBuilder，它封装了 UTXO 选择和找零计算的复杂性，提供了简洁的链式 API。
+In this article, we implemented the simplified Bitcoin transaction system. We learned how to construct transactions by selecting UTXOs, calculating change, and generating transaction IDs. We examined two layers of transaction authorization: validating the signature itself and confirming that the signer controls the referenced UTXO. We also implemented `TransactionBuilder`, which encapsulates UTXO selection and change calculation behind a concise fluent API.
 
-这些组件构成了比特币价值转移的核心。有了它们，我们可以创建交易、签名交易、验证交易。Transaction 类管理交易的数据结构，TransactionSigner 负责安全性，TransactionBuilder 提供易用性。三个类各司其职，共同构建了一个健壮的交易系统。
-
-
-
+These components form the core of value transfer in this project. Together they can create, sign, and validate transactions. `Transaction` manages the data structure, `TransactionSigner` handles authorization checks, and `TransactionBuilder` provides a convenient construction interface. Each class has a distinct responsibility within the transaction system.
