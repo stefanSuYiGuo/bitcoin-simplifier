@@ -1,19 +1,19 @@
 import {Script, ScriptBuilder} from '../script'
 
 /**
- * 交易输入类
- * 表示交易的输入，引用之前的 UTXO
- * 支持传统签名模式和脚本模式
+ * Transaction input.
+ * References an existing UTXO.
+ * Supports both legacy signature fields and scripts.
  */
 export class TxInput {
-  /** 解锁脚本 (scriptSig) */
+  /** Unlocking script (scriptSig) */
   private _scriptSig?: Script
 
   /**
-   * @param txId 引用的交易 ID
-   * @param outputIndex 引用的输出索引
-   * @param signature 签名（传统模式，可选）
-   * @param publicKey 公钥（传统模式，可选）
+   * @param txId ID of the referenced transaction
+   * @param outputIndex Index of the referenced output
+   * @param signature Optional signature for legacy mode
+   * @param publicKey Optional public key for legacy mode
    */
   constructor(
     public readonly txId: string,
@@ -22,22 +22,22 @@ export class TxInput {
     public publicKey: string = ''
   ) {
     if (!txId || txId.trim().length === 0) {
-      throw new Error('交易 ID 不能为空')
+      throw new Error('Transaction ID cannot be empty')
     }
     if (outputIndex < 0) {
-      throw new Error('输出索引不能为负数')
+      throw new Error('Output index cannot be negative')
     }
   }
 
   /**
-   * 设置签名（传统模式）
-   * @param signature 签名
-   * @param publicKey 公钥
+   * Sets the signature fields used by legacy mode.
+   * @param signature Signature to store
+   * @param publicKey Public key to store
    */
   setSignature(signature: string, publicKey: string): void {
     this.signature = signature
     this.publicKey = publicKey
-    // 同时更新 scriptSig
+    // Keep scriptSig in sync
     this._scriptSig = ScriptBuilder.buildP2PKHUnlockingScript(
       signature,
       publicKey
@@ -45,11 +45,11 @@ export class TxInput {
   }
 
   /**
-   * 设置解锁脚本 (scriptSig)
+   * Sets the unlocking script (scriptSig).
    */
   setScriptSig(scriptSig: Script): void {
     this._scriptSig = scriptSig
-    // 尝试从脚本中提取签名和公钥（用于向后兼容）
+    // Extract the signature and public key when possible for compatibility
     const elements = scriptSig.getElements()
     if (elements.length >= 2) {
       if (elements[0].type === 'data') {
@@ -62,13 +62,13 @@ export class TxInput {
   }
 
   /**
-   * 获取解锁脚本
+   * Returns the unlocking script.
    */
   getScriptSig(): Script {
     if (this._scriptSig) {
       return this._scriptSig
     }
-    // 从传统字段构建脚本
+    // Build a script from the legacy fields
     if (this.signature && this.publicKey) {
       return ScriptBuilder.buildP2PKHUnlockingScript(
         this.signature,
@@ -79,7 +79,7 @@ export class TxInput {
   }
 
   /**
-   * 是否已签名
+   * Returns whether the input has signature data.
    */
   isSigned(): boolean {
     return (
@@ -89,7 +89,7 @@ export class TxInput {
   }
 
   /**
-   * 转换为 JSON 对象
+   * Converts the input to a JSON object.
    */
   toJSON(): {
     txId: string
@@ -111,7 +111,7 @@ export class TxInput {
   }
 
   /**
-   * 从 JSON 对象创建
+   * Creates an input from a JSON object.
    */
   static fromJSON(json: {
     txId: string
@@ -133,7 +133,7 @@ export class TxInput {
   }
 
   /**
-   * 转换为字符串（用于哈希计算，不包含签名）
+   * Serializes the unsigned input content for hashing.
    */
   toStringForSigning(): string {
     return JSON.stringify({
@@ -143,22 +143,22 @@ export class TxInput {
   }
 
   /**
-   * 转换为字符串（包含签名）
+   * Serializes the input including its signature data.
    */
   toString(): string {
     return JSON.stringify(this.toJSON())
   }
 
   /**
-   * 获取 UTXO 引用的唯一标识
-   * 格式: txId:outputIndex
+   * Returns the unique identifier for the referenced UTXO.
+   * Format: txId:outputIndex
    */
   getUTXOKey(): string {
     return `${this.txId}:${this.outputIndex}`
   }
 
   /**
-   * 克隆输入
+   * Creates a copy of the input.
    */
   clone(): TxInput {
     const cloned = new TxInput(
