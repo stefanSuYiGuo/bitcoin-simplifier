@@ -1,41 +1,41 @@
 import {TxOutput} from '../TxOutput'
 
 describe('TxOutput', () => {
-  describe('构造函数', () => {
-    it('应该创建有效的交易输出', () => {
+  describe('constructor', () => {
+    it('creates a valid transaction output', () => {
       const output = new TxOutput(50, 'recipient_address')
 
       expect(output.amount).toBe(50)
       expect(output.address).toBe('recipient_address')
     })
 
-    it('应该拒绝零金额', () => {
+    it('rejects a zero amount', () => {
       expect(() => {
         new TxOutput(0, 'address')
-      }).toThrow('输出金额必须大于 0')
+      }).toThrow('Output amount must be greater than 0')
     })
 
-    it('应该拒绝负金额', () => {
+    it('rejects a negative amount', () => {
       expect(() => {
         new TxOutput(-10, 'address')
-      }).toThrow('输出金额必须大于 0')
+      }).toThrow('Output amount must be greater than 0')
     })
 
-    it('应该拒绝空地址', () => {
+    it('rejects an empty address', () => {
       expect(() => {
         new TxOutput(10, '')
-      }).toThrow('接收地址不能为空')
+      }).toThrow('Recipient address cannot be empty')
     })
 
-    it('应该拒绝只包含空格的地址', () => {
+    it('rejects a whitespace-only address', () => {
       expect(() => {
         new TxOutput(10, '   ')
-      }).toThrow('接收地址不能为空')
+      }).toThrow('Recipient address cannot be empty')
     })
   })
 
   describe('toJSON', () => {
-    it('应该正确序列化为 JSON', () => {
+    it('serializes to JSON', () => {
       const output = new TxOutput(100, 'test_address')
       const json = output.toJSON()
 
@@ -47,7 +47,7 @@ describe('TxOutput', () => {
   })
 
   describe('fromJSON', () => {
-    it('应该从 JSON 反序列化', () => {
+    it('deserializes from JSON', () => {
       const json = {
         amount: 75,
         address: 'another_address'
@@ -60,8 +60,8 @@ describe('TxOutput', () => {
     })
   })
 
-  describe('JSON 往返', () => {
-    it('序列化后反序列化应该得到相同数据', () => {
+  describe('JSON round trip', () => {
+    it('preserves data through serialization and deserialization', () => {
       const original = new TxOutput(42.5, 'my_address')
 
       const json = original.toJSON()
@@ -73,7 +73,7 @@ describe('TxOutput', () => {
   })
 
   describe('toString', () => {
-    it('应该返回 JSON 字符串', () => {
+    it('returns a JSON string', () => {
       const output = new TxOutput(25, 'addr123')
       const str = output.toString()
 
@@ -87,7 +87,7 @@ describe('TxOutput', () => {
   })
 
   describe('clone', () => {
-    it('应该创建副本', () => {
+    it('creates a copy', () => {
       const original = new TxOutput(60, 'original_addr')
       const cloned = original.clone()
 
@@ -97,19 +97,18 @@ describe('TxOutput', () => {
     })
   })
 
-  describe('小数金额', () => {
-    it('应该支持小数金额', () => {
+  describe('amount ranges', () => {
+    it('supports fractional amounts', () => {
       const output = new TxOutput(0.00000001, 'satoshi_addr')
 
       expect(output.amount).toBe(0.00000001)
     })
 
-    it('应该支持大金额', () => {
+    it('supports large amounts', () => {
       const output = new TxOutput(21000000, 'big_addr')
 
       expect(output.amount).toBe(21000000)
     })
   })
 })
-
 
