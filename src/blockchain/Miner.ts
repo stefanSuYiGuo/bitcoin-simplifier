@@ -5,8 +5,8 @@ import {Transaction, TxInput, TxOutput} from '../transaction'
 import {Wallet} from '../wallet'
 
 /**
- * 矿工类
- * 负责打包交易、创建区块、执行挖矿
+ * Miner implementation.
+ * Packages transactions, creates blocks, and performs mining.
  */
 export class Miner {
   private wallet: Wallet
@@ -18,34 +18,34 @@ export class Miner {
   }
 
   /**
-   * 挖矿：创建并挖掘一个新区块
+   * Create and mine a new block.
    */
   mineBlock(transactions: Transaction[]): {
     block: Block
     miningResult: MiningResult
   } {
-    // 获取最新区块
+    // Get the latest block
     const latestBlock = this.blockchain.getLatestBlock()
 
-    // 计算区块奖励和总手续费
+    // Calculate the block reward and total transaction fees
     const blockReward = this.blockchain.getBlockReward()
     const totalFees = this.calculateTotalFees(transactions)
     const minerReward = blockReward + totalFees
 
-    // 创建 Coinbase 交易
+    // Create the coinbase transaction
     const coinbaseTx = Transaction.createCoinbase(
       this.wallet.address,
       minerReward,
       latestBlock.index + 1
     )
 
-    // 将 Coinbase 交易放在第一位
+    // Place the coinbase transaction first
     const allTransactions = [coinbaseTx, ...transactions]
 
-    // 计算下一个区块的难度
+    // Calculate the next block's difficulty
     const difficulty = this.blockchain.calculateNextDifficulty()
 
-    // 创建新区块
+    // Create the new block
     const newBlock = new Block(
       latestBlock.index + 1,
       latestBlock.hash,
@@ -54,13 +54,13 @@ export class Miner {
       difficulty
     )
 
-    // 执行工作量证明
-    console.log(`开始挖矿区块 #${newBlock.index}，难度: ${difficulty}...`)
+    // Perform proof of work
+    console.log(`Mining block #${newBlock.index} at difficulty ${difficulty}...`)
     const miningResult = ProofOfWork.mine(newBlock)
     console.log(
-      `挖矿成功！哈希: ${miningResult.hash.substring(0, 20)}...，尝试次数: ${
+      `Block mined! Hash: ${miningResult.hash.substring(0, 20)}..., attempts: ${
         miningResult.attempts
-      }，用时: ${miningResult.duration}ms`
+      }, duration: ${miningResult.duration}ms`
     )
 
     return {
@@ -70,7 +70,7 @@ export class Miner {
   }
 
   /**
-   * 挖掘空区块（仅包含 Coinbase 交易）
+   * Mine an empty block containing only a coinbase transaction.
    */
   mineEmptyBlock(): {
     block: Block
@@ -80,8 +80,8 @@ export class Miner {
   }
 
   /**
-   * 选择交易进行打包
-   * 按手续费从高到低排序
+   * Select transactions for inclusion in a block.
+   * Sorts them by transaction fee in descending order.
    */
   selectTransactions(
     candidateTransactions: Transaction[],
@@ -89,9 +89,9 @@ export class Miner {
   ): Transaction[] {
     const utxoSet = this.blockchain.getUTXOSet()
 
-    // 过滤有效交易并计算手续费
+    // Filter valid transactions and calculate their fees
     const txWithFees = candidateTransactions
-      .filter((tx) => !tx.isCoinbase()) // 排除 Coinbase 交易
+      .filter((tx) => !tx.isCoinbase()) // Exclude coinbase transactions
       .map((tx) => {
         try {
           const fee = tx.calculateFee(utxoSet.getAll())
@@ -105,15 +105,15 @@ export class Miner {
       fee: number
     }>
 
-    // 按手续费降序排序
+    // Sort by fee in descending order
     txWithFees.sort((a, b) => b.fee - a.fee)
 
-    // 取前 N 个交易
+    // Take the first N transactions
     return txWithFees.slice(0, maxTransactions).map((item) => item.tx)
   }
 
   /**
-   * 计算交易总手续费
+   * Calculate total transaction fees.
    */
   private calculateTotalFees(transactions: Transaction[]): number {
     const utxoSet = this.blockchain.getUTXOSet()
@@ -127,7 +127,7 @@ export class Miner {
       try {
         totalFees += tx.calculateFee(utxoSet.getAll())
       } catch (error) {
-        // UTXO 不存在，跳过
+        // Skip inputs that reference a missing UTXO
       }
     }
 
@@ -135,21 +135,21 @@ export class Miner {
   }
 
   /**
-   * 获取矿工钱包
+   * Get the miner's wallet.
    */
   getWallet(): Wallet {
     return this.wallet
   }
 
   /**
-   * 获取矿工地址
+   * Get the miner's address.
    */
   getAddress(): string {
     return this.wallet.address
   }
 
   /**
-   * 获取矿工在区块链上的余额
+   * Get the miner's balance on the blockchain.
    */
   getBalance(): number {
     const utxoSet = this.blockchain.getUTXOSet()
@@ -157,30 +157,30 @@ export class Miner {
   }
 
   /**
-   * 估算挖矿时间
+   * Estimate the mining time.
    */
   estimateMiningTime(): string {
     const latestBlock = this.blockchain.getLatestBlock()
     const difficulty = this.blockchain.calculateNextDifficulty()
     const attempts = ProofOfWork.estimateAttempts(difficulty)
 
-    // 假设哈希率为 100,000 哈希/秒（仅供参考）
+    // Assume a reference hash rate of 100,000 hashes per second
     const estimatedHashRate = 100000
     const estimatedSeconds = attempts / estimatedHashRate
 
     if (estimatedSeconds < 1) {
-      return '< 1 秒'
+      return '< 1 second'
     } else if (estimatedSeconds < 60) {
-      return `~${Math.round(estimatedSeconds)} 秒`
+      return `~${Math.round(estimatedSeconds)} seconds`
     } else if (estimatedSeconds < 3600) {
-      return `~${Math.round(estimatedSeconds / 60)} 分钟`
+      return `~${Math.round(estimatedSeconds / 60)} minutes`
     } else {
-      return `~${Math.round(estimatedSeconds / 3600)} 小时`
+      return `~${Math.round(estimatedSeconds / 3600)} hours`
     }
   }
 
   /**
-   * 获取矿工统计信息
+   * Get miner statistics.
    */
   getStats(): object {
     return {
