@@ -539,3 +539,4 @@ Part 2 will implement the blockchain, proof of work (mining), and the basic cons
 
 Bitcoin's design combines cryptography, data structures, and economic incentives to create a decentralized electronic cash system. Implementing a simplified version helps us understand both the underlying principles and the elegance of the design.
 
+ 
