@@ -15,50 +15,50 @@ describe('TransactionBuilder', () => {
     aliceWallet = new Wallet()
     bobWallet = new Wallet()
 
-    // 为 Alice 添加一些 UTXO
+    // Add several UTXOs for Alice
     utxoSet.add('tx1', 0, new TxOutput(100, aliceWallet.address))
     utxoSet.add('tx2', 0, new TxOutput(50, aliceWallet.address))
     utxoSet.add('tx3', 0, new TxOutput(25, aliceWallet.address))
 
-    // 为 Bob 添加一些 UTXO
+    // Add a UTXO for Bob
     utxoSet.add('tx4', 0, new TxOutput(30, bobWallet.address))
   })
 
-  describe('基本交易构建', () => {
-    it('应该构建简单的转账交易', () => {
+  describe('basic transaction building', () => {
+    it('builds a simple transfer', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 40).build()
 
       expect(tx.inputs.length).toBeGreaterThan(0)
       expect(tx.outputs.length).toBeGreaterThanOrEqual(1)
 
-      // 检查接收者输出
+      // Check the recipient output
       const bobOutput = tx.outputs.find((o) => o.address === bobWallet.address)
       expect(bobOutput).toBeDefined()
       expect(bobOutput!.amount).toBe(40)
     })
 
-    it('应该自动计算找零', () => {
+    it('calculates change automatically', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 40).build()
 
-      // Alice 有 100 + 50 + 25 = 175 的余额
-      // 支付 40 给 Bob，应该有找零
+      // Alice has a balance of 100 + 50 + 25 = 175
+      // Paying Bob 40 should produce change
       const changeOutput = tx.outputs.find(
         (o) => o.address === aliceWallet.address
       )
       expect(changeOutput).toBeDefined()
     })
 
-    it('应该选择足够的 UTXO', () => {
+    it('selects enough UTXOs', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 120).build()
 
-      // 需要 120，应该选择 100 + 50 = 150 的 UTXO
+      // A payment of 120 should select the 100 and 50 UTXOs
       expect(tx.inputs.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('应该支持多个接收者', () => {
+    it('supports multiple recipients', () => {
       const charlie = new Wallet()
 
       const builder = new TransactionBuilder(utxoSet)
@@ -80,8 +80,8 @@ describe('TransactionBuilder', () => {
     })
   })
 
-  describe('交易签名', () => {
-    it('应该构建并签名交易', () => {
+  describe('transaction signing', () => {
+    it('builds and signs a transaction', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder
         .from(aliceWallet)
@@ -92,7 +92,7 @@ describe('TransactionBuilder', () => {
       expect(tx.inputs[0].publicKey).toBe(aliceWallet.publicKey)
     })
 
-    it('签名后的交易应该可以验证', () => {
+    it('produces a verifiable signed transaction', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder
         .from(aliceWallet)
@@ -115,12 +115,12 @@ describe('TransactionBuilder', () => {
     })
   })
 
-  describe('UTXO 选择策略', () => {
-    it('应该优先选择大额 UTXO（贪心算法）', () => {
+  describe('UTXO selection strategy', () => {
+    it('prioritizes larger UTXOs with a greedy strategy', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 40).build()
 
-      // 应该选择 100 的 UTXO（最大的一个）
+      // Select the largest UTXO, which is worth 100
       const hasLargestUTXO = tx.inputs.some((input) => {
         const utxo = utxoSet.get(input.txId, input.outputIndex)
         return utxo && utxo.amount === 100
@@ -129,30 +129,30 @@ describe('TransactionBuilder', () => {
       expect(hasLargestUTXO).toBe(true)
     })
 
-    it('应该选择最少数量的 UTXO', () => {
+    it('selects the fewest UTXOs needed', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 40).build()
 
-      // 40 可以用一个 100 或 50 的 UTXO 满足，所以应该只选择 1 个
+      // One 100 or 50 UTXO can cover 40, so only one should be selected
       expect(tx.inputs.length).toBe(1)
     })
   })
 
-  describe('找零处理', () => {
-    it('没有找零时不应该创建找零输出', () => {
-      // 创建一个精确金额的场景
+  describe('change handling', () => {
+    it('does not create a change output for an exact payment', () => {
+      // Create an exact-payment scenario
       const exactUtxoSet = new UTXOSet()
       exactUtxoSet.add('tx1', 0, new TxOutput(50, aliceWallet.address))
 
       const builder = new TransactionBuilder(exactUtxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 50).build()
 
-      // 应该只有一个输出（给 Bob），没有找零
+      // The transaction should contain only Bob's output and no change
       expect(tx.outputs.length).toBe(1)
       expect(tx.outputs[0].address).toBe(bobWallet.address)
     })
 
-    it('应该支持自定义找零地址', () => {
+    it('supports a custom change address', () => {
       const changeAddress = new Wallet().address
 
       const builder = new TransactionBuilder(utxoSet)
@@ -166,11 +166,11 @@ describe('TransactionBuilder', () => {
       expect(changeOutput).toBeDefined()
     })
 
-    it('默认找零地址应该是发送者地址', () => {
+    it('uses the sender address as the default change address', () => {
       const builder = new TransactionBuilder(utxoSet)
       const tx = builder.from(aliceWallet).to(bobWallet.address, 40).build()
 
-      // 应该有找零输出到 Alice 的地址
+      // Change should be sent to Alice's address
       const changeOutput = tx.outputs.find(
         (o) => o.address === aliceWallet.address
       )
@@ -178,55 +178,55 @@ describe('TransactionBuilder', () => {
     })
   })
 
-  describe('错误处理', () => {
-    it('应该拒绝没有发送者的交易', () => {
+  describe('error handling', () => {
+    it('rejects a transaction without a sender', () => {
       const builder = new TransactionBuilder(utxoSet)
 
       expect(() => {
         builder.to(bobWallet.address, 40).build()
-      }).toThrow('必须指定发送者钱包')
+      }).toThrow('A sender wallet is required')
     })
 
-    it('应该拒绝没有接收者的交易', () => {
+    it('rejects a transaction without recipients', () => {
       const builder = new TransactionBuilder(utxoSet)
 
       expect(() => {
         builder.from(aliceWallet).build()
-      }).toThrow('必须至少有一个接收者')
+      }).toThrow('At least one recipient is required')
     })
 
-    it('应该拒绝余额不足的交易', () => {
+    it('rejects a transaction with insufficient funds', () => {
       const builder = new TransactionBuilder(utxoSet)
 
       expect(() => {
         builder.from(aliceWallet).to(bobWallet.address, 1000).build()
-      }).toThrow(/余额不足/)
+      }).toThrow(/Insufficient balance/)
     })
 
-    it('应该拒绝金额为 0 或负数的转账', () => {
+    it('rejects zero and negative transfer amounts', () => {
       const builder = new TransactionBuilder(utxoSet)
 
       expect(() => {
         builder.from(aliceWallet).to(bobWallet.address, 0)
-      }).toThrow('转账金额必须大于 0')
+      }).toThrow('Transfer amount must be greater than 0')
 
       expect(() => {
         builder.from(aliceWallet).to(bobWallet.address, -10)
-      }).toThrow('转账金额必须大于 0')
+      }).toThrow('Transfer amount must be greater than 0')
     })
 
-    it('应该拒绝没有 UTXO 的发送者', () => {
+    it('rejects a sender without UTXOs', () => {
       const emptyWallet = new Wallet()
       const builder = new TransactionBuilder(utxoSet)
 
       expect(() => {
         builder.from(emptyWallet).to(bobWallet.address, 10).build()
-      }).toThrow(/没有可用的 UTXO/)
+      }).toThrow(/No UTXOs available/)
     })
   })
 
-  describe('静态方法', () => {
-    it('应该通过静态方法创建简单转账', () => {
+  describe('static methods', () => {
+    it('creates a simple transfer with the static helper', () => {
       const tx = TransactionBuilder.createSimpleTransfer(
         aliceWallet,
         bobWallet.address,
@@ -241,13 +241,13 @@ describe('TransactionBuilder', () => {
       expect(bobOutput).toBeDefined()
       expect(bobOutput!.amount).toBe(40)
 
-      // 应该已经签名
+      // The transaction should already be signed
       expect(tx.inputs[0].isSigned()).toBe(true)
     })
   })
 
-  describe('链式调用', () => {
-    it('应该支持链式调用构建交易', () => {
+  describe('method chaining', () => {
+    it('builds a transaction through chained calls', () => {
       const tx = new TransactionBuilder(utxoSet)
         .from(aliceWallet)
         .to(bobWallet.address, 30)
@@ -260,14 +260,14 @@ describe('TransactionBuilder', () => {
     })
   })
 
-  describe('实际场景', () => {
-    it('场景1：Alice 向 Bob 转账 50 BTC', () => {
+  describe('practical scenarios', () => {
+    it('scenario 1: Alice sends 50 BTC to Bob', () => {
       const tx = new TransactionBuilder(utxoSet)
         .from(aliceWallet)
         .to(bobWallet.address, 50)
         .buildAndSign()
 
-      // 验证交易
+      // Verify the transaction
       const utxoMap = new Map<string, {amount: number; address: string}>()
       for (const input of tx.inputs) {
         const utxo = utxoSet.get(input.txId, input.outputIndex)
@@ -281,12 +281,12 @@ describe('TransactionBuilder', () => {
 
       expect(TransactionSigner.verifyTransaction(tx, utxoMap)).toBe(true)
 
-      // 检查金额
+      // Check the amount
       const bobOutput = tx.outputs.find((o) => o.address === bobWallet.address)
       expect(bobOutput!.amount).toBe(50)
     })
 
-    it('场景2：Alice 向多人转账', () => {
+    it('scenario 2: Alice sends funds to multiple recipients', () => {
       const charlie = new Wallet()
       const david = new Wallet()
 
@@ -306,9 +306,9 @@ describe('TransactionBuilder', () => {
       expect(totalSent).toBe(90)
     })
 
-    it('场景3：检查找零金额正确', () => {
-      // Alice 有 100 + 50 + 25 = 175
-      // 转账 100 给 Bob
+    it('scenario 3: calculates the correct change amount', () => {
+      // Alice has 100 + 50 + 25 = 175
+      // Send 100 to Bob
       const tx = new TransactionBuilder(utxoSet)
         .from(aliceWallet)
         .to(bobWallet.address, 100)
@@ -321,7 +321,7 @@ describe('TransactionBuilder', () => {
         (o) => o.address === aliceWallet.address
       )
 
-      // 计算实际输入金额
+      // Calculate the actual input amount
       let inputAmount = 0
       for (const input of tx.inputs) {
         const utxo = utxoSet.get(input.txId, input.outputIndex)
@@ -330,21 +330,21 @@ describe('TransactionBuilder', () => {
         }
       }
 
-      // 找零应该 = 输入 - 输出（100）
+      // Change should equal inputs minus the 100 output
       if (changeOutput) {
         expect(changeOutput.amount).toBe(inputAmount - 100)
       }
     })
   })
 
-  describe('金额计算', () => {
-    it('输入金额应该等于输出金额', () => {
+  describe('amount calculations', () => {
+    it('balances total input and output amounts', () => {
       const tx = new TransactionBuilder(utxoSet)
         .from(aliceWallet)
         .to(bobWallet.address, 40)
         .build()
 
-      // 计算输入总额
+      // Calculate the total input amount
       let inputAmount = 0
       for (const input of tx.inputs) {
         const utxo = utxoSet.get(input.txId, input.outputIndex)
@@ -353,7 +353,7 @@ describe('TransactionBuilder', () => {
         }
       }
 
-      // 计算输出总额
+      // Calculate the total output amount
       const outputAmount = tx.outputs.reduce((sum, o) => sum + o.amount, 0)
 
       expect(inputAmount).toBe(outputAmount)
