@@ -1,11 +1,11 @@
 import { TxOutput } from './TxOutput'
 
 /**
- * UTXO (Unspent Transaction Output) 集合管理类
- * 管理所有未花费的交易输出
+ * UTXO set manager.
+ * Tracks all unspent transaction outputs.
  */
 export class UTXOSet {
-  // 使用 Map 存储 UTXO，键格式：txId:outputIndex
+  // Store UTXOs in a map keyed by txId:outputIndex
   private utxos: Map<string, TxOutput>
 
   constructor() {
@@ -13,10 +13,10 @@ export class UTXOSet {
   }
 
   /**
-   * 添加 UTXO
-   * @param txId 交易 ID
-   * @param outputIndex 输出索引
-   * @param output 交易输出
+   * Adds a UTXO.
+   * @param txId Transaction ID
+   * @param outputIndex Output index
+   * @param output Transaction output
    */
   add(txId: string, outputIndex: number, output: TxOutput): void {
     const key = this.makeKey(txId, outputIndex)
@@ -24,10 +24,10 @@ export class UTXOSet {
   }
 
   /**
-   * 移除 UTXO（当被花费时）
-   * @param txId 交易 ID
-   * @param outputIndex 输出索引
-   * @returns 是否成功移除
+   * Removes a UTXO after it is spent.
+   * @param txId Transaction ID
+   * @param outputIndex Output index
+   * @returns Whether the UTXO was removed
    */
   remove(txId: string, outputIndex: number): boolean {
     const key = this.makeKey(txId, outputIndex)
@@ -35,10 +35,10 @@ export class UTXOSet {
   }
 
   /**
-   * 获取 UTXO
-   * @param txId 交易 ID
-   * @param outputIndex 输出索引
-   * @returns UTXO 或 undefined
+   * Returns a UTXO.
+   * @param txId Transaction ID
+   * @param outputIndex Output index
+   * @returns The UTXO, or undefined when it does not exist
    */
   get(txId: string, outputIndex: number): TxOutput | undefined {
     const key = this.makeKey(txId, outputIndex)
@@ -46,9 +46,9 @@ export class UTXOSet {
   }
 
   /**
-   * 检查 UTXO 是否存在
-   * @param txId 交易 ID
-   * @param outputIndex 输出索引
+   * Checks whether a UTXO exists.
+   * @param txId Transaction ID
+   * @param outputIndex Output index
    */
   has(txId: string, outputIndex: number): boolean {
     const key = this.makeKey(txId, outputIndex)
@@ -56,9 +56,9 @@ export class UTXOSet {
   }
 
   /**
-   * 获取指定地址的所有 UTXO
-   * @param address 地址
-   * @returns UTXO 列表，包含 txId、outputIndex 和 output
+   * Returns every UTXO owned by an address.
+   * @param address Owner address
+   * @returns UTXOs with their transaction IDs and output indexes
    */
   getUTXOsByAddress(address: string): Array<{
     txId: string
@@ -86,9 +86,9 @@ export class UTXOSet {
   }
 
   /**
-   * 计算指定地址的余额
-   * @param address 地址
-   * @returns 余额
+   * Calculates the balance of an address.
+   * @param address Owner address
+   * @returns Total unspent balance
    */
   getBalance(address: string): number {
     let balance = 0
@@ -103,28 +103,28 @@ export class UTXOSet {
   }
 
   /**
-   * 获取所有 UTXO
+   * Returns a copy of all UTXOs.
    */
   getAll(): Map<string, TxOutput> {
     return new Map(this.utxos)
   }
 
   /**
-   * 获取 UTXO 总数
+   * Returns the number of UTXOs.
    */
   size(): number {
     return this.utxos.size
   }
 
   /**
-   * 清空所有 UTXO
+   * Removes every UTXO.
    */
   clear(): void {
     this.utxos.clear()
   }
 
   /**
-   * 克隆 UTXO 集合
+   * Creates a copy of the UTXO set.
    */
   clone(): UTXOSet {
     const newSet = new UTXOSet()
@@ -133,17 +133,17 @@ export class UTXOSet {
   }
 
   /**
-   * 生成 UTXO 的键
-   * @param txId 交易 ID
-   * @param outputIndex 输出索引
+   * Builds a UTXO map key.
+   * @param txId Transaction ID
+   * @param outputIndex Output index
    */
   private makeKey(txId: string, outputIndex: number): string {
     return `${txId}:${outputIndex}`
   }
 
   /**
-   * 解析 UTXO 的键
-   * @param key 键
+   * Parses a UTXO map key.
+   * @param key UTXO map key
    * @returns [txId, outputIndex]
    */
   private parseKey(key: string): [string, number] {
@@ -152,7 +152,7 @@ export class UTXOSet {
   }
 
   /**
-   * 导出为 JSON
+   * Exports the UTXO set as JSON-compatible data.
    */
   toJSON(): Array<{
     txId: string
@@ -178,7 +178,7 @@ export class UTXOSet {
   }
 
   /**
-   * 从 JSON 导入
+   * Creates a UTXO set from JSON-compatible data.
    */
   static fromJSON(json: Array<{
     txId: string
@@ -195,5 +195,4 @@ export class UTXOSet {
     return set
   }
 }
-
 
