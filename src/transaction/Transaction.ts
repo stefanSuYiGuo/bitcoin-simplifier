@@ -3,8 +3,8 @@ import {TxOutput} from './TxOutput'
 import {Hash} from '../crypto/hash'
 
 /**
- * 交易类
- * 表示一笔完整的比特币交易
+ * Transaction implementation.
+ * Represents a complete Bitcoin transaction.
  */
 export class Transaction {
   id: string
@@ -13,10 +13,10 @@ export class Transaction {
   timestamp: number
 
   /**
-   * 构造函数
-   * @param inputs 交易输入列表
-   * @param outputs 交易输出列表
-   * @param timestamp 时间戳（可选，默认当前时间）
+   * Create a transaction.
+   * @param inputs Transaction inputs.
+   * @param outputs Transaction outputs.
+   * @param timestamp Optional timestamp that defaults to the current time.
    */
   constructor(
     inputs: TxInput[],
@@ -24,10 +24,10 @@ export class Transaction {
     timestamp: number = Date.now()
   ) {
     if (inputs.length === 0) {
-      throw new Error('交易必须至少有一个输入')
+      throw new Error('A transaction must have at least one input')
     }
     if (outputs.length === 0) {
-      throw new Error('交易必须至少有一个输出')
+      throw new Error('A transaction must have at least one output')
     }
 
     this.inputs = inputs
@@ -37,8 +37,8 @@ export class Transaction {
   }
 
   /**
-   * 计算交易 ID
-   * 交易 ID 是交易内容的哈希值（不包含签名）
+   * Calculate the transaction ID.
+   * The ID hashes the transaction content without signatures.
    */
   private calculateId(): string {
     const content = this.getContentForSigning()
@@ -46,8 +46,8 @@ export class Transaction {
   }
 
   /**
-   * 获取用于签名的交易内容
-   * 不包含签名字段，因为签名是对交易内容的签名
+   * Get the transaction content used for signing.
+   * Signature fields are excluded because signatures cover the transaction content.
    */
   getContentForSigning(): string {
     const inputsForSigning = this.inputs.map((input) => ({
@@ -65,8 +65,8 @@ export class Transaction {
   }
 
   /**
-   * 获取输入总金额
-   * 注意：需要 UTXO 集合来查询每个输入的金额
+   * Get the total input amount.
+   * Requires a UTXO set to look up the amount of each input.
    */
   getInputAmount(utxoSet: Map<string, TxOutput>): number {
     let total = 0
@@ -74,7 +74,7 @@ export class Transaction {
       const key = `${input.txId}:${input.outputIndex}`
       const utxo = utxoSet.get(key)
       if (!utxo) {
-        throw new Error(`UTXO 不存在: ${key}`)
+        throw new Error(`UTXO not found: ${key}`)
       }
       total += utxo.amount
     }
@@ -82,15 +82,15 @@ export class Transaction {
   }
 
   /**
-   * 获取输出总金额
+   * Get the total output amount.
    */
   getOutputAmount(): number {
     return this.outputs.reduce((sum, output) => sum + output.amount, 0)
   }
 
   /**
-   * 计算矿工费
-   * 矿工费 = 输入总额 - 输出总额
+   * Calculate the transaction fee.
+   * Fee = total inputs - total outputs.
    */
   calculateFee(utxoSet: Map<string, TxOutput>): number {
     const inputAmount = this.getInputAmount(utxoSet)
@@ -99,24 +99,24 @@ export class Transaction {
   }
 
   /**
-   * 验证交易的基本有效性
-   * 不包括签名验证（签名验证需要单独进行）
+   * Validate the transaction's basic structure and amounts.
+   * Signature verification is performed separately.
    */
   isValid(utxoSet: Map<string, TxOutput>): boolean {
     try {
-      // 检查输入输出不为空
+      // Require at least one input and output
       if (this.inputs.length === 0 || this.outputs.length === 0) {
         return false
       }
 
-      // 检查所有输出金额为正数
+      // Require every output amount to be positive
       for (const output of this.outputs) {
         if (output.amount <= 0) {
           return false
         }
       }
 
-      // 检查输入总额 >= 输出总额
+      // Require total inputs to cover total outputs
       const inputAmount = this.getInputAmount(utxoSet)
       const outputAmount = this.getOutputAmount()
       if (inputAmount < outputAmount) {
@@ -130,8 +130,8 @@ export class Transaction {
   }
 
   /**
-   * 检查交易是否为 Coinbase 交易
-   * Coinbase 交易是矿工奖励交易，没有输入（或输入的 txId 为特殊值）
+   * Check whether this is a coinbase transaction.
+   * A coinbase transaction pays the miner and uses a special input transaction ID.
    */
   isCoinbase(): boolean {
     return (
@@ -142,7 +142,7 @@ export class Transaction {
   }
 
   /**
-   * 转换为 JSON 对象
+   * Convert the transaction to a JSON object.
    */
   toJSON(): {
     id: string
@@ -159,7 +159,7 @@ export class Transaction {
   }
 
   /**
-   * 从 JSON 对象创建交易
+   * Create a transaction from a JSON object.
    */
   static fromJSON(json: {
     inputs: any[]
@@ -174,17 +174,17 @@ export class Transaction {
   }
 
   /**
-   * 创建 Coinbase 交易
-   * @param minerAddress 矿工地址
-   * @param amount 奖励金额
-   * @param blockHeight 区块高度（用于 coinbase 输入）
+   * Create a coinbase transaction.
+   * @param minerAddress Miner address.
+   * @param amount Reward amount.
+   * @param blockHeight Block height used by the coinbase input.
    */
   static createCoinbase(
     minerAddress: string,
     amount: number,
     blockHeight: number = 0
   ): Transaction {
-    // Coinbase 交易的输入使用特殊的 txId
+    // A coinbase input uses a special transaction ID
     const coinbaseInput = new TxInput(
       '0000000000000000000000000000000000000000000000000000000000000000',
       blockHeight,
@@ -198,7 +198,7 @@ export class Transaction {
   }
 
   /**
-   * 克隆交易
+   * Clone the transaction.
    */
   clone(): Transaction {
     const inputs = this.inputs.map((input) => input.clone())
@@ -207,7 +207,7 @@ export class Transaction {
   }
 
   /**
-   * 转换为字符串（用于调试）
+   * Convert the transaction to a debug string.
    */
   toString(): string {
     return `Transaction(
