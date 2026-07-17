@@ -1,78 +1,78 @@
-# 实现一个简单的比特币：Part 3 - 区块链与挖矿
+# Building a Simple Bitcoin: Part 3 - Blockchain and Mining
 
-在前两篇文章中，我们实现了比特币的基础组件：密码学工具、钱包系统、UTXO 模型和交易系统。现在我们来到了比特币最核心的部分：区块链和挖矿。
+In the first two articles, we implemented Bitcoin's foundational components: cryptographic utilities, the wallet system, the UTXO model, and the transaction system. We have now reached Bitcoin's core: the blockchain and mining.
 
-今天我们将深入探讨如何实现区块链的存储结构、Merkle 树、工作量证明算法，以及矿工如何打包交易并通过挖矿获得奖励。
+This article explores how to implement the blockchain storage structure, Merkle trees, the proof-of-work algorithm, and the process by which miners package transactions and earn rewards through mining.
 
-## 一、为什么需要区块链
+## 1. Why a Blockchain Is Necessary
 
-在前面的文章中，我们解决了如何证明所有权（数字签名）和如何记录交易（UTXO 模型）。但还有一个关键问题没有解决：谁来维护这个账本？如何确保账本不被篡改？
+The previous articles addressed how to prove ownership through digital signatures and how to record transactions with the UTXO model. One critical question remains: Who maintains the ledger, and how can we ensure that it is not tampered with?
 
-在传统系统中，银行维护账本，我们信任银行不会作恶。但在比特币的去中心化世界里，没有一个可信的中心机构。我们需要一种机制，让所有参与者都能维护同一份账本，并且这份账本一旦写入就很难被修改。
+In a traditional system, a bank maintains the ledger, and we trust it not to act maliciously. Bitcoin's decentralized environment has no trusted central authority. We need a mechanism that allows all participants to maintain the same ledger and makes recorded data difficult to modify.
 
-区块链就是这样一种数据结构。它将交易打包成区块，每个区块包含前一个区块的哈希值，形成一条链。要修改历史记录，攻击者需要重新计算被修改区块之后的所有区块，这在计算上是极其困难的。
+A blockchain is such a data structure. It packages transactions into blocks, and each block contains the hash of the preceding block, forming a chain. To alter historical records, an attacker would need to recalculate every block after the modified block, which is computationally extremely difficult.
 
-但这里有个问题：一个区块可能包含成百上千笔交易。如果我们想验证某笔交易是否在区块中，难道要下载所有交易数据吗？对于轻量级客户端（如手机钱包）来说，这显然不现实。
+This introduces another problem: a block may contain hundreds or thousands of transactions. Must we download every transaction to verify whether one particular transaction is included? That is clearly impractical for lightweight clients such as mobile wallets.
 
-比特币的解决方案是 **Merkle 树**。它让区块头只需存储一个 32 字节的 Merkle 根，就能代表整个交易集合。验证者只需要少量的哈希值（Merkle 证明），就能证明某笔交易确实在区块中，而无需下载全部交易。这种设计使得轻量级客户端成为可能。
+Bitcoin's solution is the **Merkle tree**. A block header can represent the complete transaction set with a single 32-byte Merkle root. Using only a small number of hashes—a Merkle proof—a verifier can prove that a transaction is included in the block without downloading every transaction. This design makes lightweight clients possible.
 
-## 二、Merkle 树：高效验证的基石
+## 2. Merkle Trees: The Foundation of Efficient Verification
 
-让我们详细了解 Merkle 树的工作原理，以及它如何为区块链提供高效验证能力。
+Let us examine how a Merkle tree works and how it provides efficient verification for a blockchain.
 
-### 2.1 什么是 Merkle 树
+### 2.1 What Is a Merkle Tree?
 
-Merkle 树是一种二叉树，叶子节点是数据的哈希值，非叶子节点是其子节点哈希值的哈希。最终树根（Merkle 根）是整个数据集的唯一指纹。
+A Merkle tree is a binary tree whose leaf nodes are hashes of data and whose non-leaf nodes hash the values of their children. The final root, known as the Merkle root, is a unique fingerprint of the complete dataset.
 
-让我们看一个例子：
+Consider an example:
 
-**构建 Merkle 树：**
+**Building a Merkle tree:**
 
 ```
-交易列表: [tx1, tx2, tx3, tx4]
+Transaction list: [tx1, tx2, tx3, tx4]
 
-第一层（叶子节点）：
+Level 1 (leaf nodes):
 Hash(tx1)  Hash(tx2)  Hash(tx3)  Hash(tx4)
    H1         H2         H3         H4
 
-第二层：
+Level 2:
      H12 = Hash(H1 + H2)    H34 = Hash(H3 + H4)
 
-第三层（根）：
+Level 3 (root):
           Root = Hash(H12 + H34)
 ```
 
-Merkle 树有什么用？假设你想验证 tx1 是否在区块中，你不需要下载所有交易，只需要：
+What is a Merkle tree used for? To verify whether tx1 is included in a block, you do not need to download every transaction. You only need:
 
-**Merkle 证明：**
+**Merkle proof:**
 
-| 需要的数据 | 说明 |
+| Required data | Description |
 |-----------|------|
-| tx1 | 要验证的交易 |
-| H2 | tx1 的兄弟节点 |
-| H34 | 父节点的兄弟节点 |
-| Root | Merkle 根（区块头中已有） |
+| tx1 | Transaction to verify |
+| H2 | Sibling node of tx1 |
+| H34 | Sibling node of the parent |
+| Root | Merkle root already present in the block header |
 
-验证步骤：
+Verification steps:
 
 ```
-1. 计算 H1 = Hash(tx1)
-2. 计算 H12 = Hash(H1 + H2)
-3. 计算 Root' = Hash(H12 + H34)
-4. 比较 Root' 是否等于 Root
+1. Calculate H1 = Hash(tx1)
+2. Calculate H12 = Hash(H1 + H2)
+3. Calculate Root' = Hash(H12 + H34)
+4. Compare Root' with Root
 ```
 
-如果相等，就证明 tx1 确实在区块中。对于有 1000 笔交易的区块，Merkle 证明只需要大约 10 个哈希值，而不是全部 1000 笔交易。
+If they are equal, the proof confirms that tx1 is included in the block. For a block containing 1,000 transactions, a Merkle proof requires only about 10 hash values instead of all 1,000 transactions.
 
-### 2.2 实现 Merkle 树
+### 2.2 Implementing a Merkle Tree
 
-我们使用纯指针式（对象引用）实现 Merkle 树，通过节点间的引用关系构建真正的树形结构：
+We implement the Merkle tree with object references, constructing a true tree structure through references between nodes:
 
 ```typescript
 export interface MerkleNode {
   hash: string
-  left?: MerkleNode   // 左子节点引用
-  right?: MerkleNode  // 右子节点引用
+  left?: MerkleNode   // Reference to the left child
+  right?: MerkleNode  // Reference to the right child
 }
 
 export class MerkleTree {
@@ -81,88 +81,88 @@ export class MerkleTree {
 
   constructor(data: string[]) {
     if (data.length === 0) {
-      throw new Error('Merkle 树至少需要一个数据元素')
+      throw new Error('A Merkle tree requires at least one data element')
     }
 
-    // 对每个数据计算哈希
+    // Hash each data element
     this.leaves = data.map((item) => Hash.sha256(item))
-    // 构建树
+    // Build the tree
     this.root = this.buildTree(this.leaves)
   }
 
   private buildTree(hashes: string[]): MerkleNode {
-    // 创建叶子节点（每个哈希对应一个节点对象）
+    // Create leaf nodes, one node object for each hash
     const leafNodes: MerkleNode[] = hashes.map((hash) => ({ hash }))
     
-    // 递归构建树
+    // Build the tree recursively
     return this.buildTreeFromNodes(leafNodes)
   }
 
   private buildTreeFromNodes(nodes: MerkleNode[]): MerkleNode {
-    // 如果只有一个节点，它就是根节点
+    // A single remaining node is the root
     if (nodes.length === 1) {
       return nodes[0]
     }
 
     const parentNodes: MerkleNode[] = []
 
-    // 两两配对构建父节点
+    // Pair nodes to build their parents
     for (let i = 0; i < nodes.length; i += 2) {
       const left = nodes[i]
       const right = i + 1 < nodes.length ? nodes[i + 1] : nodes[i]
 
       const parent: MerkleNode = {
         hash: Hash.sha256(left.hash + right.hash),
-        left,   // 保存左子节点引用
-        right,  // 保存右子节点引用
+        left,   // Preserve the left child reference
+        right,  // Preserve the right child reference
       }
 
       parentNodes.push(parent)
     }
 
-    // 递归构建上层（传入节点对象，而不是哈希值）
+    // Build the next level recursively using node objects rather than hash values
     return this.buildTreeFromNodes(parentNodes)
   }
 
   getRoot(): string {
     if (!this.root) {
-      throw new Error('Merkle 树未构建')
+      throw new Error('Merkle tree has not been built')
     }
     return this.root.hash
   }
 }
 ```
 
-关键点：
+Key points:
 
-- **递归传递节点**：`buildTreeFromNodes` 接收节点数组并递归构建，保持节点间的引用关系
-- **奇数处理**：如果数据个数是奇数，最后一个节点会自我配对
-- **时间复杂度**：O(n)，其中 n 是数据个数
+- **Recursive node passing**: `buildTreeFromNodes` accepts an array of nodes and builds recursively while preserving references between nodes
+- **Odd element handling**: If the number of data elements is odd, the final node is paired with itself
+- **Time complexity**: O(n), where n is the number of data elements
 
-## 三、区块结构：链接的基石
+## 3. Block Structure: The Foundation of the Chain
 
-区块是区块链的基本单元。每个区块包含两部分：区块头和区块体。
+A block is the basic unit of a blockchain. Each block contains two parts: a block header and a block body.
 
-### 3.1 区块头
+### 3.1 Block Header
 
-区块头包含区块的元数据，是工作量证明的对象：
+The block header contains block metadata and is the subject of proof of work:
 
-| 字段 | 说明 | 作用 |
+| Field | Description | Purpose |
 |------|------|------|
-| index | 区块高度 | 标识区块在链中的位置 |
-| previousHash | 前区块哈希 | 将区块链接成链 |
-| timestamp | 时间戳 | 记录区块创建时间 |
-| merkleRoot | Merkle 根 | 所有交易的指纹 |
-| difficulty | 难度 | 挖矿目标难度 |
-| nonce | 随机数 | 工作量证明的变量 |
+| index | Block height | Identifies the block's position in the chain |
+| previousHash | Previous block hash | Links blocks into a chain |
+| timestamp | Timestamp | Records when the block was created |
+| merkleRoot | Merkle root | Fingerprint of all transactions |
+| difficulty | Difficulty | Mining target difficulty |
+| nonce | Nonce | Variable used for proof of work |
 
-### 3.2 区块体
+### 3.2 Block Body
 
-区块体包含交易列表。第一笔交易必须是 Coinbase 交易（矿工奖励），其余是普通交易。
+The block body contains the transaction list. The first transaction must be a coinbase transaction that pays the miner's reward; the remaining transactions are regular transactions.
 
-### 3.3 区块哈希
+### 3.3 Block Hash
 
-区块的哈希值是对区块头进行双重 SHA-256 计算得到的：
+The block hash is calculated by applying double SHA-256 to the block header:
 
 ```typescript
 calculateHash(): string {
@@ -178,44 +178,44 @@ calculateHash(): string {
 }
 ```
 
-注意：区块哈希不包含交易内容，只包含 Merkle 根。这意味着即使交易数据很大，哈希计算也很快。
+Note that the block hash does not contain the transaction content directly; it contains only the Merkle root. Consequently, hash calculation remains fast even when the transaction data is large.
 
-### 3.4 创世区块
+### 3.4 Genesis Block
 
-区块链的第一个区块叫创世区块，它没有前区块：
+The first block in a blockchain is called the genesis block. It has no preceding block:
 
 ```typescript
 static createGenesisBlock(coinbaseTx: Transaction): Block {
   return new Block(
-    0,                    // 索引为 0
-    '0',                  // 前区块哈希为 '0'
+    0,                    // Index is 0
+    '0',                  // Previous block hash is '0'
     Date.now(),
     [coinbaseTx],
-    1                     // 初始难度
+    1                     // Initial difficulty
   )
 }
 ```
 
-## 四、工作量证明：挖矿的核心
+## 4. Proof of Work: The Core of Mining
 
-工作量证明（Proof of Work, PoW）是比特币的共识机制。它要求矿工找到一个 nonce 值，使得区块哈希满足难度要求。
+Proof of Work (PoW) is Bitcoin's consensus mechanism. It requires miners to find a nonce that makes the block hash satisfy the difficulty requirement.
 
-### 4.1 难度目标
+### 4.1 Difficulty Target
 
-难度用前导零的个数表示。例如，难度为 4 意味着区块哈希必须以 4 个零开头：
+Difficulty is represented by the number of leading zeros. For example, a difficulty of 4 means that the block hash must begin with four zeros:
 
 ```
-难度 1: 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-难度 2: 00xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-难度 3: 000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-难度 4: 0000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Difficulty 1: 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Difficulty 2: 00xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Difficulty 3: 000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Difficulty 4: 0000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-难度每增加 1，平均需要的尝试次数增加 16 倍。
+Each increase of 1 in difficulty multiplies the average number of required attempts by 16.
 
-### 4.2 挖矿过程
+### 4.2 Mining Process
 
-挖矿就是不断尝试不同的 nonce 值，直到找到满足难度的哈希：
+Mining repeatedly tries different nonce values until it finds a hash that satisfies the difficulty requirement:
 
 ```typescript
 static mine(block: Block): MiningResult {
@@ -247,42 +247,42 @@ static mine(block: Block): MiningResult {
 }
 ```
 
-让我们看一个实际的挖矿例子：
+Consider a practical mining example:
 
-**挖矿示例（难度 = 3）：**
+**Mining example (difficulty = 3):**
 
 ```
-尝试 nonce = 0:
-  区块哈希: 8a3b4c5d...
-  不满足条件（没有以 000 开头）
+Try nonce = 0:
+  Block hash: 8a3b4c5d...
+  Requirement not satisfied (does not begin with 000)
 
-尝试 nonce = 1:
-  区块哈希: 2f9e1a7b...
-  不满足条件
+Try nonce = 1:
+  Block hash: 2f9e1a7b...
+  Requirement not satisfied
 
 ...
 
-尝试 nonce = 4832:
-  区块哈希: 000a1b2c3d4e5f...
-  满足条件！找到有效区块！
+Try nonce = 4832:
+  Block hash: 000a1b2c3d4e5f...
+  Requirement satisfied; a valid block has been found
 ```
 
-这个过程看起来很简单，但实际上：
-- 难度 1：平均需要尝试 16 次
-- 难度 2：平均需要尝试 256 次
-- 难度 3：平均需要尝试 4,096 次
-- 难度 4：平均需要尝试 65,536 次
+The process looks simple, but in practice:
+- Difficulty 1: 16 attempts on average
+- Difficulty 2: 256 attempts on average
+- Difficulty 3: 4,096 attempts on average
+- Difficulty 4: 65,536 attempts on average
 
-在真实的比特币网络中，难度远远大于这个数字，可能需要尝试数万亿次才能找到有效区块。
+On the real Bitcoin network, the difficulty is far higher and finding a valid block may require trillions of attempts.
 
-工作量证明的巧妙之处在于它 **验证容易，计算困难**，这意味着任何人都能快速验证区块的有效性，但要创建有效区块需要投入大量计算资源
-。修改历史记录需要重新挖掘所有后续区块，成本极高
+The ingenuity of proof of work is that it is **easy to verify but difficult to compute**. Anyone can quickly verify a block's validity, but creating a valid block requires substantial computational resources
+. Modifying historical records requires mining every subsequent block again, which is extremely costly
 
-## 五、区块链管理：维护账本
+## 5. Blockchain Management: Maintaining the Ledger
 
-有了区块和工作量证明，我们需要一个类来管理整条区块链。
+With blocks and proof of work in place, we need a class to manage the entire blockchain.
 
-### 5.1 区块链的核心功能
+### 5.1 Core Blockchain Functions
 
 ```typescript
 export class Blockchain {
@@ -290,7 +290,7 @@ export class Blockchain {
   private utxoSet: UTXOSet
   private config: BlockchainConfig
 
-  // 添加新区块
+  // Add a new block
   addBlock(block: Block): boolean {
     if (!this.isValidNewBlock(block, this.getLatestBlock())) {
       return false
@@ -303,50 +303,50 @@ export class Blockchain {
 }
 ```
 
-### 5.2 区块验证
+### 5.2 Block Validation
 
-添加区块前需要进行多项检查：
+Several checks must be performed before a block is added:
 
-**区块验证检查项：**
+**Block validation checks:**
 
-| 检查项 | 说明 | 重要性 |
+| Check | Description | Importance |
 |--------|------|--------|
-| 索引连续 | `newBlock.index = previousBlock.index + 1` | 确保链的连续性 |
-| 前区块哈希匹配 | `newBlock.previousHash = previousBlock.hash` | 确保链的完整性 |
-| 工作量证明 | `hash.startsWith('0'.repeat(difficulty))` | 确保付出了计算成本 |
-| 时间戳合理 | `newBlock.timestamp > previousBlock.timestamp` | 防止时间倒退 |
-| 交易有效 | 所有交易都通过验证 | 确保交易合法性 |
+| Sequential index | `newBlock.index = previousBlock.index + 1` | Ensures chain continuity |
+| Matching previous block hash | `newBlock.previousHash = previousBlock.hash` | Ensures chain integrity |
+| Proof of work | `hash.startsWith('0'.repeat(difficulty))` | Ensures computational work was performed |
+| Valid timestamp | `newBlock.timestamp > previousBlock.timestamp` | Prevents time from moving backward |
+| Valid transactions | Every transaction passes validation | Ensures transaction validity |
 
 ```typescript
 private isValidNewBlock(newBlock: Block, previousBlock: Block): boolean {
-  // 检查索引
+  // Check the index
   if (newBlock.index !== previousBlock.index + 1) {
     return false
   }
 
-  // 检查前区块哈希
+  // Check the previous block hash
   if (newBlock.previousHash !== previousBlock.hash) {
     return false
   }
 
-  // 检查工作量证明
+  // Check proof of work
   if (!ProofOfWork.verify(newBlock)) {
     return false
   }
 
-  // 检查时间戳
+  // Check the timestamp
   if (newBlock.timestamp <= previousBlock.timestamp) {
     return false
   }
 
-  // 验证所有交易
+  // Validate every transaction
   for (const tx of newBlock.transactions) {
-    // Coinbase 交易跳过 UTXO 验证
+    // Skip UTXO validation for coinbase transactions
     if (tx.isCoinbase()) {
       continue
     }
 
-    // 验证交易的 UTXO 是否存在
+    // Verify that the transaction's UTXOs exist
     if (!this.isValidTransaction(tx)) {
       return false
     }
@@ -356,7 +356,7 @@ private isValidNewBlock(newBlock: Block, previousBlock: Block): boolean {
 }
 
 private isValidTransaction(tx: Transaction): boolean {
-  // 检查所有输入引用的 UTXO 是否存在
+  // Check that the UTXO referenced by every input exists
   for (const input of tx.inputs) {
     if (!this.utxoSet.has(input.txId, input.outputIndex)) {
       return false
@@ -366,39 +366,39 @@ private isValidTransaction(tx: Transaction): boolean {
 }
 ```
 
-### 5.3 难度调整
+### 5.3 Difficulty Adjustment
 
-为了保持稳定的出块时间，区块链需要定期调整挖矿难度。我们的实现每 10 个区块调整一次：
+To maintain a stable block interval, the blockchain must adjust mining difficulty periodically. Our implementation adjusts it every 10 blocks:
 
 ```typescript
 calculateNextDifficulty(): number {
   const latestBlock = this.getLatestBlock()
 
-  // 未到调整间隔，保持当前难度
+  // Keep the current difficulty until the adjustment interval is reached
   if ((latestBlock.index + 1) % this.config.difficultyAdjustmentInterval !== 0) {
     return latestBlock.difficulty
   }
 
-  // 获取上个调整周期的第一个区块
+  // Get the first block from the previous adjustment period
   const adjustmentBlock = this.chain[
     this.chain.length - this.config.difficultyAdjustmentInterval
   ]
 
-  // 计算实际时间
+  // Calculate the actual elapsed time
   const actualTime = (latestBlock.timestamp - adjustmentBlock.timestamp) / 1000
 
-  // 计算预期时间
+  // Calculate the expected elapsed time
   const expectedTime = 
     this.config.targetBlockTime * this.config.difficultyAdjustmentInterval
 
   const ratio = actualTime / expectedTime
 
-  // 如果实际时间比预期快 2 倍以上，增加难度
+  // Increase difficulty if the actual time is more than twice as fast as expected
   if (ratio < 0.5) {
     return latestBlock.difficulty + 1
   }
 
-  // 如果实际时间比预期慢 2 倍以上，降低难度
+  // Decrease difficulty if the actual time is more than twice as slow as expected
   if (ratio > 2) {
     return Math.max(1, latestBlock.difficulty - 1)
   }
@@ -407,45 +407,45 @@ calculateNextDifficulty(): number {
 }
 ```
 
-**难度调整示例：**
+**Difficulty adjustment example:**
 
 ```
-场景：目标出块时间 10 秒，调整间隔 10 个区块
+Scenario: Target block time of 10 seconds and an adjustment interval of 10 blocks
 
-情况 1：出块太快
-  预期时间：10 秒 × 10 = 100 秒
-  实际时间：45 秒
-  比率：45/100 = 0.45 < 0.5
-  调整：难度 +1
+Case 1: Blocks are produced too quickly
+  Expected time: 10 seconds × 10 = 100 seconds
+  Actual time: 45 seconds
+  Ratio: 45/100 = 0.45 < 0.5
+  Adjustment: Difficulty +1
 
-情况 2：出块太慢
-  预期时间：100 秒
-  实际时间：210 秒
-  比率：210/100 = 2.1 > 2
-  调整：难度 -1
+Case 2: Blocks are produced too slowly
+  Expected time: 100 seconds
+  Actual time: 210 seconds
+  Ratio: 210/100 = 2.1 > 2
+  Adjustment: Difficulty -1
 
-情况 3：速度正常
-  预期时间：100 秒
-  实际时间：95 秒
-  比率：95/100 = 0.95
-  调整：难度不变
+Case 3: Block production speed is normal
+  Expected time: 100 seconds
+  Actual time: 95 seconds
+  Ratio: 95/100 = 0.95
+  Adjustment: Difficulty unchanged
 ```
 
-### 5.4 UTXO 集合维护
+### 5.4 Maintaining the UTXO Set
 
-每当新区块被添加到链上，我们需要更新 UTXO 集合：
+Whenever a new block is added to the chain, the UTXO set must be updated:
 
 ```typescript
 private updateUTXOSet(block: Block): void {
   for (const tx of block.transactions) {
-    // 移除花费的 UTXO（Coinbase 交易除外）
+    // Remove spent UTXOs except for coinbase transactions
     if (!tx.isCoinbase()) {
       for (const input of tx.inputs) {
         this.utxoSet.remove(input.txId, input.outputIndex)
       }
     }
 
-    // 添加新的 UTXO
+    // Add new UTXOs
     tx.outputs.forEach((output, index) => {
       this.utxoSet.add(tx.id, index, output)
     })
@@ -453,68 +453,68 @@ private updateUTXOSet(block: Block): void {
 }
 ```
 
-**UTXO 更新示例：**
+**UTXO update example:**
 
-初始状态：
+Initial state:
 
-| UTXO | 金额 | 所有者 | 状态 |
+| UTXO | Amount | Owner | Status |
 |------|------|--------|------|
-| tx1:0 | 100 BTC | Alice | 有效 |
-| tx2:0 | 50 BTC | Bob | 有效 |
+| tx1:0 | 100 BTC | Alice | Unspent |
+| tx2:0 | 50 BTC | Bob | Unspent |
 
-新区块包含交易 tx3（Alice 转给 Carol 60 BTC）：
+The new block contains transaction tx3, in which Alice sends Carol 60 BTC:
 
-| UTXO | 金额 | 所有者 | 状态 | 操作 |
+| UTXO | Amount | Owner | Status | Operation |
 |------|------|--------|------|------|
-| tx1:0 | 100 BTC | Alice | 已花费 | 移除 |
-| tx2:0 | 50 BTC | Bob | 有效 | 保留 |
-| tx3:0 | 60 BTC | Carol | 有效 | 新增 |
-| tx3:1 | 40 BTC | Alice | 有效 | 新增（找零） |
+| tx1:0 | 100 BTC | Alice | Spent | Remove |
+| tx2:0 | 50 BTC | Bob | Unspent | Retain |
+| tx3:0 | 60 BTC | Carol | Unspent | Add |
+| tx3:1 | 40 BTC | Alice | Unspent | Add as change |
 
-Coinbase 交易（tx3_coinbase，矿工奖励 50 BTC）：
+Coinbase transaction (tx3_coinbase, 50 BTC mining reward):
 
-| UTXO | 金额 | 所有者 | 状态 | 操作 |
+| UTXO | Amount | Owner | Status | Operation |
 |------|------|--------|------|------|
-| tx3_coinbase:0 | 50 BTC | Miner | 有效 | 新增 |
+| tx3_coinbase:0 | 50 BTC | Miner | Unspent | Add |
 
-## 六、矿工：打包交易与挖矿
+## 6. Miners: Packaging Transactions and Mining
 
-矿工是区块链的维护者。他们选择交易、创建区块、执行工作量证明，并获得奖励。
+Miners maintain the blockchain. They select transactions, create blocks, perform proof of work, and receive rewards.
 
-### 6.1 矿工的工作流程
+### 6.1 Miner Workflow
 
-**完整的挖矿流程：**
+**Complete mining workflow:**
 
 ```
-步骤 1: 选择交易
-  - 从交易池选择待确认的交易
-  - 按手续费从高到低排序
-  - 选择前 N 个交易
+Step 1: Select transactions
+  - Select unconfirmed transactions from the transaction pool
+  - Sort them by fee in descending order
+  - Select the first N transactions
 
-步骤 2: 计算奖励
-  - 区块奖励：50 BTC（固定）
-  - 交易手续费：所有交易的手续费总和
-  - 矿工总收益 = 区块奖励 + 交易手续费
+Step 2: Calculate the reward
+  - Block reward: 50 BTC (fixed)
+  - Transaction fees: Sum of fees from all transactions
+  - Total miner revenue = block reward + transaction fees
 
-步骤 3: 创建 Coinbase 交易
-  - 输入：特殊的全零 txId
-  - 输出：矿工总收益 → 矿工地址
+Step 3: Create the coinbase transaction
+  - Input: Special all-zero txId
+  - Output: Total miner revenue → miner address
 
-步骤 4: 构建区块
-  - 将 Coinbase 交易放在第一位
-  - 添加选中的交易
-  - 设置前区块哈希、时间戳、难度
+Step 4: Build the block
+  - Place the coinbase transaction first
+  - Add the selected transactions
+  - Set the previous block hash, timestamp, and difficulty
 
-步骤 5: 执行工作量证明
-  - 不断尝试 nonce 值
-  - 直到找到满足难度的哈希
+Step 5: Perform proof of work
+  - Repeatedly try nonce values
+  - Continue until a hash satisfies the difficulty requirement
 
-步骤 6: 广播区块
-  - 将挖到的区块添加到区块链
-  - 广播给其他节点（我们的简化版本中省略）
+Step 6: Broadcast the block
+  - Add the mined block to the blockchain
+  - Broadcast it to other nodes (omitted from our simplified version)
 ```
 
-### 6.2 实现矿工类
+### 6.2 Implementing the Miner Class
 
 ```typescript
 export class Miner {
@@ -527,19 +527,19 @@ export class Miner {
   } {
     const latestBlock = this.blockchain.getLatestBlock()
 
-    // 计算矿工奖励
+    // Calculate the miner reward
     const blockReward = this.blockchain.getBlockReward()
     const totalFees = this.calculateTotalFees(transactions)
     const minerReward = blockReward + totalFees
 
-    // 创建 Coinbase 交易
+    // Create the coinbase transaction
     const coinbaseTx = Transaction.createCoinbase(
       this.wallet.address,
       minerReward,
       latestBlock.index + 1
     )
 
-    // 构建区块
+    // Build the block
     const difficulty = this.blockchain.calculateNextDifficulty()
     const newBlock = new Block(
       latestBlock.index + 1,
@@ -549,7 +549,7 @@ export class Miner {
       difficulty
     )
 
-    // 执行工作量证明
+    // Perform proof of work
     const miningResult = ProofOfWork.mine(newBlock)
 
     return { block: newBlock, miningResult }
@@ -557,9 +557,9 @@ export class Miner {
 }
 ```
 
-### 6.3 交易选择策略
+### 6.3 Transaction Selection Strategy
 
-矿工需要从交易池中选择交易。我们采用贪心策略：优先选择手续费高的交易。
+Miners must select transactions from the transaction pool. We use a greedy strategy that prioritizes transactions with higher fees.
 
 ```typescript
 selectTransactions(
@@ -568,7 +568,7 @@ selectTransactions(
 ): Transaction[] {
   const utxoSet = this.blockchain.getUTXOSet()
 
-  // 计算每个交易的手续费
+  // Calculate the fee for each transaction
   const txWithFees = candidateTransactions
     .filter((tx) => !tx.isCoinbase())
     .map((tx) => {
@@ -581,45 +581,45 @@ selectTransactions(
     })
     .filter((item) => item !== null)
 
-  // 按手续费降序排序
+  // Sort by fee in descending order
   txWithFees.sort((a, b) => b.fee - a.fee)
 
-  // 取前 N 个交易
+  // Take the first N transactions
   return txWithFees.slice(0, maxTransactions).map((item) => item.tx)
 }
 ```
 
-**交易选择示例：**
+**Transaction selection example:**
 
-交易池：
+Transaction pool:
 
-| 交易 ID | 输入总额 | 输出总额 | 手续费 | 优先级 |
+| Transaction ID | Total inputs | Total outputs | Fee | Priority |
 |---------|---------|---------|--------|--------|
 | tx1 | 100 BTC | 98 BTC | 2 BTC | 1 |
 | tx2 | 50 BTC | 49.5 BTC | 0.5 BTC | 3 |
 | tx3 | 80 BTC | 79 BTC | 1 BTC | 2 |
 | tx4 | 30 BTC | 29.9 BTC | 0.1 BTC | 4 |
 
-矿工选择（假设只选 2 个）：
-- 选择 tx1（手续费最高）
-- 选择 tx3（手续费第二高）
+Miner selection (assuming only two are selected):
+- Select tx1, which has the highest fee
+- Select tx3, which has the second-highest fee
 
-**矿工收益计算：**
+**Miner revenue calculation:**
 
 ```
-区块奖励：50 BTC
-交易手续费：2 BTC (tx1) + 1 BTC (tx3) = 3 BTC
-矿工总收益：50 + 3 = 53 BTC
+Block reward: 50 BTC
+Transaction fees: 2 BTC (tx1) + 1 BTC (tx3) = 3 BTC
+Total miner revenue: 50 + 3 = 53 BTC
 ```
 
-## 七、实际应用场景
+## 7. Practical Scenario
 
-让我们通过一个完整的例子看看区块链系统是如何工作的。
+The following complete example demonstrates how the blockchain system works.
 
-### 场景：从创世到多个区块
+### Scenario: From Genesis to Multiple Blocks
 
 ```typescript
-// 1. 创建区块链和钱包
+// 1. Create the blockchain and wallets
 const blockchain = new Blockchain({
   initialDifficulty: 2,
   blockReward: 50,
@@ -631,29 +631,29 @@ const miner = new Wallet()
 const alice = new Wallet()
 const bob = new Wallet()
 
-// 2. 创建创世区块
+// 2. Create the genesis block
 const genesisCoinbase = Transaction.createCoinbase(miner.address, 50, 0)
 const genesisBlock = Block.createGenesisBlock(genesisCoinbase)
 blockchain.initializeWithGenesisBlock(genesisBlock)
 
-console.log('创世区块已创建')
-console.log(`矿工余额: ${blockchain.getUTXOSet().getBalance(miner.address)} BTC`)
-// 输出: 矿工余额: 50 BTC
+console.log('Genesis block created')
+console.log(`Miner balance: ${blockchain.getUTXOSet().getBalance(miner.address)} BTC`)
+// Output: Miner balance: 50 BTC
 
-// 3. 挖第二个区块
+// 3. Mine the second block
 const minerInstance = new Miner(miner, blockchain)
 const { block: block1, miningResult: result1 } = minerInstance.mineEmptyBlock()
 
-console.log(`\n挖矿区块 #1:`)
-console.log(`  哈希: ${result1.hash}`)
-console.log(`  尝试次数: ${result1.attempts}`)
-console.log(`  用时: ${result1.duration}ms`)
+console.log(`\nMining block #1:`)
+console.log(`  Hash: ${result1.hash}`)
+console.log(`  Attempts: ${result1.attempts}`)
+console.log(`  Duration: ${result1.duration}ms`)
 
 blockchain.addBlock(block1)
-console.log(`矿工余额: ${blockchain.getUTXOSet().getBalance(miner.address)} BTC`)
-// 输出: 矿工余额: 100 BTC
+console.log(`Miner balance: ${blockchain.getUTXOSet().getBalance(miner.address)} BTC`)
+// Output: Miner balance: 100 BTC
 
-// 4. 矿工给 Alice 转账
+// 4. The miner sends funds to Alice
 const utxoSet = blockchain.getUTXOSet()
 const tx1 = TransactionBuilder.createSimpleTransfer(
   miner,
@@ -662,15 +662,15 @@ const tx1 = TransactionBuilder.createSimpleTransfer(
   utxoSet
 )
 
-// 5. 挖包含交易的区块
+// 5. Mine a block containing the transaction
 const { block: block2, miningResult: result2 } = minerInstance.mineBlock([tx1])
 blockchain.addBlock(block2)
 
-console.log(`\n区块 #2 已添加`)
-console.log(`Alice 余额: ${blockchain.getUTXOSet().getBalance(alice.address)} BTC`)
-// 输出: Alice 余额: 30 BTC
+console.log(`\nBlock #2 added`)
+console.log(`Alice balance: ${blockchain.getUTXOSet().getBalance(alice.address)} BTC`)
+// Output: Alice balance: 30 BTC
 
-// 6. Alice 给 Bob 转账
+// 6. Alice sends funds to Bob
 const tx2 = TransactionBuilder.createSimpleTransfer(
   alice,
   bob.address,
@@ -678,40 +678,40 @@ const tx2 = TransactionBuilder.createSimpleTransfer(
   blockchain.getUTXOSet()
 )
 
-// 7. 挖包含 Alice 转账的区块
+// 7. Mine a block containing Alice's transfer
 const { block: block3 } = minerInstance.mineBlock([tx2])
 blockchain.addBlock(block3)
 
-console.log(`\n区块 #3 已添加`)
-console.log(`Bob 余额: ${blockchain.getUTXOSet().getBalance(bob.address)} BTC`)
-// 输出: Bob 余额: 15 BTC
+console.log(`\nBlock #3 added`)
+console.log(`Bob balance: ${blockchain.getUTXOSet().getBalance(bob.address)} BTC`)
+// Output: Bob balance: 15 BTC
 ```
 
-**最终状态：**
+**Final state:**
 
-区块链状态：
+Blockchain state:
 
-| 区块 | 高度 | 哈希 | 交易数 | 难度 |
+| Block | Height | Hash | Transaction count | Difficulty |
 |------|------|------|--------|------|
-| 创世区块 | 0 | 00a3f2... | 1 | 2 |
-| 区块1 | 1 | 007b1e... | 1 | 2 |
-| 区块2 | 2 | 0045c9... | 2 | 2 |
-| 区块3 | 3 | 00d8f3... | 2 | 2 |
+| Genesis block | 0 | 00a3f2... | 1 | 2 |
+| Block 1 | 1 | 007b1e... | 1 | 2 |
+| Block 2 | 2 | 0045c9... | 2 | 2 |
+| Block 3 | 3 | 00d8f3... | 2 | 2 |
 
-余额汇总：
+Balance summary:
 
-| 用户 | 余额 | 说明 |
+| User | Balance | Description |
 |------|------|------|
-| Miner | ~170 BTC | 3次区块奖励 + 找零 + 手续费 |
-| Alice | 15 BTC | 收到30 - 转出15 |
-| Bob | 15 BTC | 从Alice收到 |
+| Miner | ~170 BTC | 3 block rewards + change + fees |
+| Alice | 15 BTC | Received 30 - sent 15 |
+| Bob | 15 BTC | Received from Alice |
 
-## 八、总结
+## 8. Summary
 
-在这篇文章中，我们实现了比特币的区块链核心。我们学习了 Merkle 树如何提供高效的交易验证，理解了区块的结构和区块哈希的计算方式。我们深入探讨了工作量证明算法，了解了挖矿的本质是寻找满足难度要求的 nonce 值。我们还实现了区块链管理类，包括区块验证、UTXO 维护和动态难度调整。最后，我们实现了矿工类，它负责选择交易、打包区块和执行挖矿。
+In this article, we implemented Bitcoin's blockchain core. We learned how Merkle trees provide efficient transaction verification and examined block structure and block-hash calculation. We explored the proof-of-work algorithm and learned that mining consists of finding a nonce that satisfies the difficulty requirement. We also implemented the blockchain management class, including block validation, UTXO maintenance, and dynamic difficulty adjustment. Finally, we implemented the miner class, which selects transactions, packages blocks, and performs mining.
 
-这些组件构成了比特币的去中心化账本。有了它们，我们不再需要可信的第三方来维护账本。工作量证明确保了修改历史的成本极高，UTXO 模型确保了不会有双花，Merkle 树提供了高效的验证机制，难度调整保证了稳定的出块时间。
+These components form Bitcoin's decentralized ledger. With them, a trusted third party is no longer required to maintain the ledger. Proof of work makes altering history extremely costly, the UTXO model prevents double-spending, Merkle trees provide efficient verification, and difficulty adjustment maintains a stable block interval.
 
-我们的实现是简化的。真实的比特币网络使用更复杂的难度调整算法（每 2016 个区块调整一次），有更严格的时间戳验证规则，并且区块奖励会每 210,000 个区块减半（这就是著名的"减半"机制）。但我们保留了最核心的概念：工作量证明、区块链接、Merkle 树和 UTXO 管理。
+Our implementation is simplified. The real Bitcoin network uses a more complex difficulty-adjustment algorithm that adjusts every 2,016 blocks, applies stricter timestamp validation rules, and halves the block reward every 210,000 blocks through the well-known halving mechanism. However, our implementation preserves the core concepts: proof of work, block linking, Merkle trees, and UTXO management.
 
 
