@@ -4,8 +4,8 @@ import {Transaction} from '../transaction'
 import {Miner} from '../blockchain/Miner'
 
 /**
- * 服务器全局状态管理
- * 维护单例的区块链实例和钱包集合
+ * Global server state manager.
+ * Maintains singleton blockchain, wallet, transaction, and miner state.
  */
 class ServerState {
   private static instance: ServerState
@@ -33,20 +33,20 @@ class ServerState {
   }
 
   /**
-   * 初始化区块链和默认钱包
+   * Initialize the blockchain and default wallets.
    */
   private initialize(): void {
-    console.log('初始化服务器状态...')
+    console.log('Initializing server state...')
 
-    // 创建默认钱包
+    // Create default wallets
     const walletNames = ['Alice', 'Bob', 'Charlie', 'Miner']
     walletNames.forEach((name) => {
       const wallet = new Wallet()
       this.wallets.set(wallet.address, wallet)
-      console.log(`创建钱包 ${name}: ${wallet.address}`)
+      console.log(`Created ${name} wallet: ${wallet.address}`)
     })
 
-    // 使用第一个钱包作为矿工创建创世区块
+    // Use the miner wallet to create the genesis block
     const minerWallet = Array.from(this.wallets.values())[3]
     const coinbaseTx = Transaction.createCoinbase(
       minerWallet.address,
@@ -55,49 +55,49 @@ class ServerState {
     )
     const genesisBlock = Block.createGenesisBlock(coinbaseTx)
 
-    // 创世区块也需要挖矿以满足 PoW 要求
-    console.log('挖掘创世区块...')
+    // Mine the genesis block so that it meets the proof-of-work target
+    console.log('Mining genesis block...')
     const miningResult = ProofOfWork.mine(genesisBlock)
     console.log(
-      `创世区块挖矿完成！nonce: ${miningResult.nonce}, 尝试次数: ${miningResult.attempts}`
+      `Genesis block mined! Nonce: ${miningResult.nonce}, attempts: ${miningResult.attempts}`
     )
 
     this.blockchain.initializeWithGenesisBlock(genesisBlock)
 
-    // 创建矿工实例
+    // Create miner instances
     this.wallets.forEach((wallet) => {
       const miner = new Miner(wallet, this.blockchain)
       this.miners.set(wallet.address, miner)
     })
 
-    console.log('服务器状态初始化完成')
-    console.log(`创世区块: ${genesisBlock.hash}`)
-    console.log(`矿工地址: ${minerWallet.address}`)
+    console.log('Server state initialized')
+    console.log(`Genesis block: ${genesisBlock.hash}`)
+    console.log(`Miner address: ${minerWallet.address}`)
   }
 
   /**
-   * 添加待处理交易
+   * Add a pending transaction.
    */
   public addPendingTransaction(tx: Transaction): void {
     this.pendingTransactions.push(tx)
   }
 
   /**
-   * 清空待处理交易
+   * Clear pending transactions.
    */
   public clearPendingTransactions(): void {
     this.pendingTransactions = []
   }
 
   /**
-   * 获取指定交易
+   * Get a transaction by ID.
    */
   public getTransaction(txId: string): Transaction | null {
-    // 先查找待处理交易
+    // Search pending transactions first
     const pendingTx = this.pendingTransactions.find((tx) => tx.id === txId)
     if (pendingTx) return pendingTx
 
-    // 查找区块链中的交易
+    // Search transactions in the blockchain
     const chain = this.blockchain.getChain()
     for (const block of chain) {
       const tx = block.transactions.find((t) => t.id === txId)
@@ -108,7 +108,7 @@ class ServerState {
   }
 
   /**
-   * 重置状态（用于测试）
+   * Reset state for tests.
    */
   public reset(): void {
     this.wallets.clear()
