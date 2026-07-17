@@ -6,8 +6,8 @@ import {Wallet} from '../wallet/Wallet'
 import {TransactionSigner} from './TransactionSigner'
 
 /**
- * 交易构建器
- * 用于构建和签名交易
+ * Transaction builder.
+ * Builds and signs transactions.
  */
 export class TransactionBuilder {
   private utxoSet: UTXOSet
@@ -21,31 +21,31 @@ export class TransactionBuilder {
   }
 
   /**
-   * 设置发送者钱包
-   * @param wallet 发送者的钱包
+   * Set the sender wallet.
+   * @param wallet Sender wallet.
    */
   from(wallet: Wallet): TransactionBuilder {
     this.fromWallet = wallet
-    this.changeAddress = wallet.address // 默认找零到发送者地址
+    this.changeAddress = wallet.address // Send change to the sender by default
     return this
   }
 
   /**
-   * 添加接收者
-   * @param address 接收者地址
-   * @param amount 金额
+   * Add a recipient.
+   * @param address Recipient address.
+   * @param amount Transfer amount.
    */
   to(address: string, amount: number): TransactionBuilder {
     if (amount <= 0) {
-      throw new Error('转账金额必须大于 0')
+      throw new Error('Transfer amount must be greater than 0')
     }
     this.recipients.push({address, amount})
     return this
   }
 
   /**
-   * 设置矿工费（每字节）
-   * @param feePerByte 每字节的矿工费
+   * Set the transaction fee per byte.
+   * @param feePerByte Transaction fee per byte.
    */
   withFee(feePerByte: number): TransactionBuilder {
     this.feePerByte = feePerByte
@@ -53,8 +53,8 @@ export class TransactionBuilder {
   }
 
   /**
-   * 设置找零地址
-   * @param address 找零地址
+   * Set the change address.
+   * @param address Change address.
    */
   withChangeAddress(address: string): TransactionBuilder {
     this.changeAddress = address
@@ -62,79 +62,79 @@ export class TransactionBuilder {
   }
 
   /**
-   * 构建交易
-   * @returns 未签名的交易
+   * Build a transaction.
+   * @returns Unsigned transaction.
    */
   build(): Transaction {
     if (!this.fromWallet) {
-      throw new Error('必须指定发送者钱包')
+      throw new Error('A sender wallet is required')
     }
 
     if (this.recipients.length === 0) {
-      throw new Error('必须至少有一个接收者')
+      throw new Error('At least one recipient is required')
     }
 
-    // 计算需要的总金额
+    // Calculate the total amount required
     const totalOutput = this.recipients.reduce(
       (sum, recipient) => sum + recipient.amount,
       0
     )
 
-    // 获取发送者的所有 UTXO
+    // Get all UTXOs owned by the sender
     const senderUTXOs = this.utxoSet.getUTXOsByAddress(this.fromWallet.address)
 
     if (senderUTXOs.length === 0) {
-      throw new Error(`发送者没有可用的 UTXO: ${this.fromWallet.address}`)
+      throw new Error(`Sender has no available UTXOs: ${this.fromWallet.address}`)
     }
 
-    // 选择 UTXO（贪心算法：按金额从大到小选择）
+    // Select UTXOs greedily from largest to smallest
     const selectedUTXOs = this.selectUTXOs(senderUTXOs, totalOutput)
 
     if (selectedUTXOs.length === 0) {
       const balance = this.utxoSet.getBalance(this.fromWallet.address)
-      throw new Error(`余额不足。需要: ${totalOutput}, 可用: ${balance}`)
+      throw new Error(`Insufficient balance. Required: ${totalOutput}, available: ${balance}`)
     }
 
-    // 计算输入总额
+    // Calculate the total input amount
     const totalInput = selectedUTXOs.reduce(
       (sum, utxo) => sum + utxo.output.amount,
       0
     )
 
-    // 构建输入
+    // Build inputs
     const inputs = selectedUTXOs.map(
       (utxo) => new TxInput(utxo.txId, utxo.outputIndex)
     )
 
-    // 构建输出
+    // Build outputs
     const outputs = this.recipients.map(
       (recipient) => new TxOutput(recipient.amount, recipient.address)
     )
 
-    // 计算找零
+    // Calculate change
     const change = totalInput - totalOutput
 
     if (change < 0) {
-      throw new Error('输入金额小于输出金额')
+      throw new Error('Input amount is less than output amount')
     }
 
-    // 如果有找零，添加找零输出
+    // Add a change output when needed
     if (change > 0) {
       const changeAddr = this.changeAddress || this.fromWallet.address
       outputs.push(new TxOutput(change, changeAddr))
     }
 
-    // 创建交易
+    // Create the transaction
     return new Transaction(inputs, outputs)
   }
 
   /**
-   * 构建并签名交易
-   * @returns 已签名的交易
+   * Build and sign a transaction.
+   * @returns Signed transaction.
    */
   buildAndSign(): Transaction {
     if (!this.fromWallet) {
-      throw new Error('必须指定发送者钱包')
+      throw new Error('A sender wallet is required')
     }
 
     const transaction = this.build()
@@ -142,14 +142,14 @@ export class TransactionBuilder {
   }
 
   /**
-   * 选择 UTXO（贪心算法）
-   * 按金额从大到小排序，然后选择直到满足需求
+   * Select UTXOs using a greedy strategy.
+   * Sorts by amount from largest to smallest until the target is met.
    */
   private selectUTXOs(
     utxos: Array<{txId: string; outputIndex: number; output: TxOutput}>,
     targetAmount: number
   ): Array<{txId: string; outputIndex: number; output: TxOutput}> {
-    // 按金额从大到小排序
+    // Sort by amount from largest to smallest
     const sorted = [...utxos].sort((a, b) => b.output.amount - a.output.amount)
 
     const selected: Array<{
@@ -163,13 +163,13 @@ export class TransactionBuilder {
       selected.push(utxo)
       total += utxo.output.amount
 
-      // 如果已经足够，停止选择
+      // Stop when the target has been met
       if (total >= targetAmount) {
         break
       }
     }
 
-    // 检查是否足够
+    // Check whether the selected amount is sufficient
     if (total < targetAmount) {
       return []
     }
@@ -178,26 +178,26 @@ export class TransactionBuilder {
   }
 
   /**
-   * 估算交易大小（字节）
-   * 这是一个简化的估算
+   * Estimate the transaction size in bytes.
+   * This is a simplified estimate.
    */
   private estimateTransactionSize(
     inputCount: number,
     outputCount: number
   ): number {
-    // 简化估算：每个输入约 150 字节，每个输出约 34 字节
+    // Simplified estimate: about 150 bytes per input and 34 bytes per output
     const inputSize = inputCount * 150
     const outputSize = outputCount * 34
-    const overhead = 10 // 交易头部开销
+    const overhead = 10 // Transaction header overhead
     return inputSize + outputSize + overhead
   }
 
   /**
-   * 静态方法：创建简单转账交易
-   * @param fromWallet 发送者钱包
-   * @param toAddress 接收者地址
-   * @param amount 金额
-   * @param utxoSet UTXO 集合
+   * Create a simple transfer transaction.
+   * @param fromWallet Sender wallet.
+   * @param toAddress Recipient address.
+   * @param amount Transfer amount.
+   * @param utxoSet UTXO set.
    */
   static createSimpleTransfer(
     fromWallet: Wallet,
