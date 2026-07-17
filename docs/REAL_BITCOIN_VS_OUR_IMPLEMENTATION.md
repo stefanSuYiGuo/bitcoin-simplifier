@@ -1,159 +1,159 @@
-# 真实比特币 vs 我们的简化实现
+# Real Bitcoin vs. Our Simplified Implementation
 
-## 交易结构对比
+## Transaction Structure Comparison
 
-### 真实比特币交易
+### Real Bitcoin Transaction
 
 ```javascript
-// 真实的比特币交易
+// Real Bitcoin transaction
 {
   version: 1,
   inputs: [
     {
-      previousTxHash: "abc123...",       // 前一个交易的哈希
-      previousOutputIndex: 0,             // 引用哪个输出
-      scriptSig: "<signature> <publicKey>", // ⭐ 解锁脚本（包含签名和公钥）
+      previousTxHash: "abc123...",       // Previous transaction hash
+      previousOutputIndex: 0,             // Referenced output
+      scriptSig: "<signature> <publicKey>", // ⭐ Unlocking script containing the signature and public key
       sequence: 0xffffffff
     }
   ],
   outputs: [
     {
-      value: 5000000000,  // 金额（单位：聪，1 BTC = 100,000,000 聪）
-      scriptPubKey: "OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG"  // ⭐ 锁定脚本
+      value: 5000000000,  // Amount in satoshis; 1 BTC = 100,000,000 satoshis
+      scriptPubKey: "OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG"  // ⭐ Locking script
     }
   ],
   lockTime: 0
 }
 ```
 
-### 我们的简化实现
+### Our Simplified Implementation
 
 ```typescript
-// 我们的简化实现
+// Our simplified implementation
 {
   inputs: [
     {
-      txId: "abc123...",         // 交易 ID
-      outputIndex: 0,             // 输出索引
-      signature: "sig...",        // ⭐ 直接存储签名
-      publicKey: "pub..."         // ⭐ 直接存储公钥
+      txId: "abc123...",         // Transaction ID
+      outputIndex: 0,             // Output index
+      signature: "sig...",        // ⭐ Store the signature directly
+      publicKey: "pub..."         // ⭐ Store the public key directly
     }
   ],
   outputs: [
     {
-      amount: 50,                 // 金额（单位：BTC）
-      address: "1A1zP1..."        // ⭐ 直接存储接收地址
+      amount: 50,                 // Amount in BTC
+      address: "1A1zP1..."        // ⭐ Store the recipient address directly
     }
   ],
   timestamp: 1234567890
 }
 ```
 
-## 主要区别
+## Key Differences
 
-### 1. 脚本系统
+### 1. Script System
 
-**真实比特币**：
-- 使用基于栈的脚本语言
-- `scriptSig`（解锁脚本）：提供签名和公钥
-- `scriptPubKey`（锁定脚本）：定义如何验证
-- 脚本提供了灵活性，可以实现多签、时间锁等复杂功能
+**Real Bitcoin**:
+- Uses a stack-based scripting language
+- `scriptSig` (unlocking script): Provides the signature and public key
+- `scriptPubKey` (locking script): Defines how validation is performed
+- Scripts provide flexibility for complex functionality such as multisignature and time locks
 
 ```
-真实比特币的验证：
-执行 scriptSig + scriptPubKey
+Real Bitcoin validation:
+Execute scriptSig + scriptPubKey
 <signature> <publicKey> OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
 ```
 
-**我们的实现**：
-- 简化为直接存储签名和公钥
-- 验证逻辑在代码中硬编码
-- 不支持复杂的交易类型
+**Our implementation**:
+- Simplifies the structure by storing signatures and public keys directly
+- Hard-codes validation logic in the application
+- Does not support complex transaction types
 
 ```typescript
-// 我们的验证
+// Our validation
 Signature.verify(txData, signature, publicKey)
-// 验证公钥对应的地址是否匹配
+// Verify that the address corresponding to the public key matches
 ```
 
-### 2. 签名的内容
+### 2. Signed Content
 
-**真实比特币**：
-- 签名不是签整个交易对象
-- 而是签署交易的特定部分（去除 scriptSig 后的交易）
-- 使用 SIGHASH 类型来指定签名范围
+**Real Bitcoin**:
+- Does not sign the complete transaction object directly
+- Signs a specific form of the transaction with `scriptSig` removed or replaced as required
+- Uses SIGHASH types to specify the signature scope
 
 ```
-签名过程：
-1. 构建交易（scriptSig 为空或临时填充）
-2. 序列化交易
-3. 根据 SIGHASH 类型修改要签名的内容
-4. 对修改后的内容进行双 SHA-256
-5. 用 ECDSA 签名这个哈希
-6. 将签名（+ SIGHASH 类型）放入 scriptSig
+Signing process:
+1. Build the transaction with an empty or temporary scriptSig
+2. Serialize the transaction
+3. Modify the content to be signed according to the SIGHASH type
+4. Apply double SHA-256 to the modified content
+5. Sign the hash with ECDSA
+6. Place the signature and SIGHASH type in scriptSig
 ```
 
-**我们的实现**：
-- 简化为对整个交易 JSON 字符串签名
-- 不考虑 SIGHASH 类型
+**Our implementation**:
+- Simplifies signing by signing the complete transaction JSON string
+- Does not account for SIGHASH types
 
 ```typescript
-// 我们的签名
+// Our signing process
 const txData = JSON.stringify(transaction)
 const signature = wallet.sign(txData)
 ```
 
-### 3. 公钥和地址的关系
+### 3. Relationship Between Public Keys and Addresses
 
-**真实比特币**：
-- 交易输出包含 `scriptPubKey`，其中有公钥哈希（pubKeyHash）
-- 交易输入包含 `scriptSig`，其中有完整的公钥
-- 验证时检查：HASH160(publicKey) == pubKeyHash
-
-```
-UTXO 锁定：
-scriptPubKey: "OP_DUP OP_HASH160 <Alice的公钥哈希> OP_EQUALVERIFY OP_CHECKSIG"
-
-花费时：
-scriptSig: "<Alice的签名> <Alice的公钥>"
-
-验证：
-1. 检查 HASH160(Alice的公钥) == Alice的公钥哈希 ✓
-2. 检查签名有效性 ✓
-```
-
-**我们的实现**：
-- 输出直接存储地址（实际上是公钥哈希的 Base58 编码）
-- 输入直接存储公钥
-- 验证时检查：Base58(RIPEMD160(SHA256(publicKey))) == address
-
-### 4. 交易 ID 的计算
-
-**真实比特币**：
-- 交易 ID = SHA256(SHA256(整个交易的序列化数据))
-- 包括 version, inputs, outputs, lockTime
-- scriptSig 的变化会改变交易 ID
-
-**我们的实现**：
-- 交易 ID = SHA256(交易内容的 JSON 字符串)
-- 简化的序列化方式
-
-## 真实比特币交易示例
-
-### P2PKH (Pay-to-Public-Key-Hash) 交易
-
-这是最常见的比特币交易类型：
+**Real Bitcoin**:
+- A transaction output contains `scriptPubKey`, which includes the public key hash (`pubKeyHash`)
+- A transaction input contains `scriptSig`, which includes the complete public key
+- Validation checks: HASH160(publicKey) == pubKeyHash
 
 ```
-Alice 给 Bob 转账 1 BTC：
+UTXO locking:
+scriptPubKey: "OP_DUP OP_HASH160 <Alice's public key hash> OP_EQUALVERIFY OP_CHECKSIG"
+
+When spending:
+scriptSig: "<Alice's signature> <Alice's public key>"
+
+Validation:
+1. Check HASH160(Alice's public key) == Alice's public key hash ✓
+2. Check signature validity ✓
+```
+
+**Our implementation**:
+- Stores the address directly in the output; the address is a Base58 encoding of the public key hash
+- Stores the public key directly in the input
+- Validation checks: Base58(RIPEMD160(SHA256(publicKey))) == address
+
+### 4. Transaction ID Calculation
+
+**Real Bitcoin**:
+- Transaction ID = SHA256(SHA256(serialized transaction data))
+- Includes version, inputs, outputs, and lockTime
+- A change to scriptSig changes the transaction ID
+
+**Our implementation**:
+- Transaction ID = SHA256(JSON string of the transaction content)
+- Uses a simplified serialization format
+
+## Real Bitcoin Transaction Example
+
+### P2PKH (Pay-to-Public-Key-Hash) Transaction
+
+This is the most common Bitcoin transaction type:
+
+```
+Alice sends Bob 1 BTC:
 
 inputs: [
   {
     previousTxHash: "7a9f2c...",
     previousOutputIndex: 0,
     scriptSig: "
-      304402203f... (Alice的签名)
-      03ab12cd... (Alice的公钥)
+      304402203f... (Alice's signature)
+      03ab12cd... (Alice's public key)
     "
   }
 ]
@@ -164,7 +164,7 @@ outputs: [
     scriptPubKey: "
       OP_DUP 
       OP_HASH160 
-      89abcdef... (Bob的公钥哈希)
+      89abcdef... (Bob's public key hash)
       OP_EQUALVERIFY 
       OP_CHECKSIG
     "
@@ -172,119 +172,119 @@ outputs: [
 ]
 ```
 
-### 验证过程详解
+### Detailed Validation Process
 
 ```
-栈执行过程：
+Stack execution process:
 
-1. 开始时栈为空
+1. The stack is initially empty
    Stack: []
 
-2. 执行 scriptSig: <signature> <publicKey>
+2. Execute scriptSig: <signature> <publicKey>
    Stack: [signature, publicKey]
 
-3. OP_DUP：复制栈顶元素
+3. OP_DUP: Duplicate the top stack item
    Stack: [signature, publicKey, publicKey]
 
-4. OP_HASH160：对栈顶进行 SHA256 + RIPEMD160
+4. OP_HASH160: Apply SHA256 + RIPEMD160 to the top stack item
    Stack: [signature, publicKey, hash(publicKey)]
 
-5. <pubKeyHash>：推入期望的公钥哈希
+5. <pubKeyHash>: Push the expected public key hash
    Stack: [signature, publicKey, hash(publicKey), expectedHash]
 
-6. OP_EQUALVERIFY：比较栈顶两个元素是否相等
-   如果相等，弹出这两个元素；否则失败
+6. OP_EQUALVERIFY: Compare the top two stack items
+   If they are equal, pop both items; otherwise fail
    Stack: [signature, publicKey]
 
-7. OP_CHECKSIG：验证签名
-   用 publicKey 验证 signature 对交易的签名
-   如果有效，推入 true；否则 false
+7. OP_CHECKSIG: Verify the signature
+   Use publicKey to verify the transaction signature
+   Push true if valid; otherwise push false
    Stack: [true]
 
-8. 如果栈顶是 true，验证成功 ✓
+8. Validation succeeds if the top stack value is true ✓
 ```
 
-## 为什么简化？
+## Why Simplify?
 
-我们的实现做了这些简化是出于教学目的：
+Our implementation makes these simplifications for educational purposes:
 
-### 优点：
-1. **更容易理解**：直接存储公钥和签名，逻辑清晰
-2. **代码简洁**：不需要实现完整的脚本引擎
-3. **聚焦核心**：专注于 UTXO 模型、签名验证等核心概念
-4. **快速实现**：可以快速构建原型验证想法
+### Advantages:
+1. **Easier to understand**: Stores public keys and signatures directly, making the logic clear
+2. **Concise code**: Does not require a complete script engine
+3. **Focus on the core**: Concentrates on concepts such as the UTXO model and signature validation
+4. **Rapid implementation**: Supports quick prototyping and validation of ideas
 
-### 缺点：
-1. **不支持高级功能**：多签、时间锁、哈希锁等
-2. **灵活性有限**：无法实现复杂的支付条件
-3. **与真实比特币不兼容**：无法与比特币网络交互
+### Disadvantages:
+1. **No advanced functionality**: Does not support multisignature, time locks, hash locks, and similar features
+2. **Limited flexibility**: Cannot implement complex payment conditions
+3. **Incompatible with real Bitcoin**: Cannot interact with the Bitcoin network
 
-## 如何升级到真实比特币
+## How to Upgrade Toward Real Bitcoin
 
-如果要实现完整的比特币兼容实现，需要：
+Implementing full Bitcoin compatibility would require:
 
-1. **实现脚本引擎**
+1. **Implement a script engine**
    ```typescript
    class Script {
      execute(scriptSig: string, scriptPubKey: string): boolean
-     // 实现各种操作码：OP_DUP, OP_HASH160, OP_CHECKSIG 等
+     // Implement opcodes such as OP_DUP, OP_HASH160, and OP_CHECKSIG
    }
    ```
 
-2. **改进交易结构**
+2. **Improve the transaction structure**
    ```typescript
    interface TxInput {
      previousTxHash: string
      previousOutputIndex: number
-     scriptSig: string  // 脚本，不是直接的签名
+     scriptSig: string  // Script rather than a direct signature
      sequence: number
    }
    
    interface TxOutput {
-     value: number  // 单位：聪
-     scriptPubKey: string  // 锁定脚本
+     value: number  // Satoshis
+     scriptPubKey: string  // Locking script
    }
    ```
 
-3. **实现 SIGHASH 类型**
-   - SIGHASH_ALL: 签名所有输入和输出
-   - SIGHASH_NONE: 只签名输入
-   - SIGHASH_SINGLE: 签名对应的输入和输出
-   - SIGHASH_ANYONECANPAY: 允许其他人添加输入
+3. **Implement SIGHASH types**
+   - SIGHASH_ALL: Sign all inputs and outputs
+   - SIGHASH_NONE: Sign only the inputs
+   - SIGHASH_SINGLE: Sign the corresponding input and output
+   - SIGHASH_ANYONECANPAY: Allow other participants to add inputs
 
-4. **支持多种交易类型**
+4. **Support multiple transaction types**
    - P2PKH (Pay-to-Public-Key-Hash)
    - P2SH (Pay-to-Script-Hash)
    - P2WPKH (Pay-to-Witness-Public-Key-Hash) - SegWit
    - P2WSH (Pay-to-Witness-Script-Hash) - SegWit
    - Taproot (P2TR)
 
-5. **实现隔离见证 (SegWit)**
-   - 将签名数据移到单独的 witness 字段
-   - 解决交易延展性问题
-   - 提高交易容量
+5. **Implement Segregated Witness (SegWit)**
+   - Move signature data to a separate witness field
+   - Address transaction malleability
+   - Increase transaction capacity
 
-## 参考资料
+## References
 
 - [Bitcoin Script](https://en.bitcoin.it/wiki/Script)
 - [Transaction Structure](https://developer.bitcoin.org/reference/transactions.html)
 - [Mastering Bitcoin - Chapter 6: Transactions](https://github.com/bitcoinbook/bitcoinbook/blob/develop/ch06.asciidoc)
 - [BIP 141: Segregated Witness](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki)
 
-## 总结
+## Summary
 
-我们的实现虽然简化了比特币的脚本系统，但保留了最核心的安全机制：
+Although our implementation simplifies Bitcoin's script system, it preserves the core security mechanisms:
 
-✅ **保留的核心概念**：
-- UTXO 模型
-- 数字签名验证
-- 公钥到地址的映射
-- 所有权验证
+✅ **Preserved core concepts**:
+- UTXO model
+- Digital signature validation
+- Public-key-to-address mapping
+- Ownership validation
 
-❌ **简化的部分**：
-- 脚本系统 → 直接存储签名和公钥
-- 复杂交易类型 → 只支持简单转账
-- 灵活的验证逻辑 → 硬编码的验证流程
+❌ **Simplified components**:
+- Script system → stores signatures and public keys directly
+- Complex transaction types → supports only simple transfers
+- Flexible validation logic → uses a hard-coded validation process
 
-这种简化让我们能够专注于理解比特币的核心思想，而不被实现细节所困扰。
+These simplifications allow us to focus on understanding Bitcoin's core concepts without being distracted by implementation details.
 
