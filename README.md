@@ -1,473 +1,217 @@
-# Simple Bitcoin Implementation
+# Bitcoin Simplifier
 
-一个用 TypeScript 实现的简化版比特币系统，用于学习和理解比特币的核心技术原理。
+Bitcoin Simplifier is an interactive educational simulator for exploring the simplified mechanics behind Bitcoin. It combines a TypeScript domain model, an Express API, and a React interface so that wallets, transactions, blocks, mining, UTXOs, and Merkle proofs can be inspected in a controlled local environment.
 
-## 特性
+This project is not a complete Bitcoin implementation. It does not connect to the Bitcoin network, participate in consensus, or create, transfer, or custody real assets. All wallets, balances, blocks, and transactions exist only in the simulator's in-memory state.
 
-- ✅ **UTXO 模型**: 基于未花费交易输出的账户系统
-- ✅ **数字钱包**: 密钥对生成、地址生成、交易签名
-- ✅ **完整交易系统**: 
-  - 交易构建、签名和验证
-  - UTXO 选择（贪心算法）
-  - 自动找零计算
-  - Coinbase 交易（矿工奖励）
-  - **多方交易支持**（每个输入独立签名）
-- ✅ **交易验证**: 
-  - 签名验证
-  - 所有权验证
-  - 双花检测
-  - 余额检查
-- ✅ **Merkle 树**: 高效的交易验证结构
-- ✅ **区块链核心**: 
-  - 区块结构（区块头 + 交易列表）
-  - 区块链接（通过前区块哈希）
-  - UTXO 集合维护
-  - 区块验证
-- ✅ **工作量证明**: SHA-256 双重哈希 PoW 挖矿
-- ✅ **动态难度调整**: 根据出块时间自动调整难度
-- ✅ **矿工系统**: 
-  - 交易打包（按手续费排序）
-  - 挖矿奖励计算
-  - 工作量证明执行
+## What the project demonstrates
 
-## 快速开始
+- Wallet creation, elliptic-curve key pairs, addresses, and digital signatures
+- A UTXO-based transaction model with input selection and change outputs
+- Transaction construction, signing, ownership checks, and double-spend prevention
+- Inputs signed independently by multiple wallets
+- Coinbase transactions, block rewards, and transaction fees
+- Blocks linked by previous-block hashes
+- Merkle tree construction, proof generation, and proof verification
+- Simplified proof-of-work mining with double SHA-256 hashing
+- Simplified difficulty adjustment based on block timing
+- A stack-based educational script system
+- In-memory blockchain validation and statistics
 
-### 安装依赖
+The browser interface provides views for the blockchain, individual blocks, wallets, transaction creation, mining, UTXOs, and Merkle proof verification. A command-line demonstration is also included.
 
-```bash
-pnpm install
-```
+## Technology stack
 
-### 运行演示
+- TypeScript and Node.js
+- Express and CORS for the local API
+- React, Vite, React Router, and Tailwind CSS for the interface
+- `elliptic` and `crypto-js` for educational cryptographic operations
+- Jest and ts-jest for automated tests
+
+## Prerequisites
+
+- Node.js 20 or a compatible current Node.js release
+- npm or pnpm
+
+## Installation
+
+Install the API and core project dependencies from the repository root, then install the frontend dependencies:
 
 ```bash
-pnpm start
+npm install
+cd frontend
+npm install
+cd ..
 ```
 
-### 编译项目
+The same commands may be run with pnpm if that is your preferred package manager.
+
+## Run the interactive simulator
+
+Start the API and frontend together from the repository root:
 
 ```bash
-pnpm build
+npm run dev:all
 ```
 
-### 运行测试
+The API listens on `http://localhost:3001`. Vite prints the local frontend URL when it starts. The frontend forwards `/api` requests to the local API server.
+
+To run each process separately, use two terminals:
 
 ```bash
-pnpm test
+# Terminal 1: API server
+npm run server:dev
+
+# Terminal 2: frontend
+npm run frontend
 ```
 
-## 项目结构
+The API health check is available at `http://localhost:3001/health`, and `http://localhost:3001/` lists the available endpoints.
 
+## Run the command-line demonstration
+
+```bash
+npm start
 ```
-bitcoin/
+
+The demonstration creates wallets and UTXOs, builds and verifies transactions, mines blocks, and prints the resulting state to the terminal.
+
+## Build and test
+
+```bash
+# Compile the TypeScript backend and core modules
+npm run build
+
+# Run the Jest test suite
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate a coverage report
+npm run test:coverage
+
+# Build the frontend
+cd frontend
+npm run build
+```
+
+## Project structure
+
+```text
+.
 ├── src/
-│   ├── crypto/              # 密码学工具 ✅
-│   │   ├── hash.ts          # SHA-256、RIPEMD-160 哈希
-│   │   └── signature.ts     # ECDSA 签名与验证
-│   ├── wallet/              # 钱包系统 ✅
-│   │   ├── KeyPair.ts       # 密钥对管理
-│   │   └── Wallet.ts        # 钱包功能
-│   ├── transaction/         # 交易系统 ✅
-│   │   ├── TxInput.ts       # 交易输入
-│   │   ├── TxOutput.ts      # 交易输出
-│   │   ├── UTXO.ts          # UTXO 集合管理
-│   │   ├── Transaction.ts   # 交易数据结构
-│   │   ├── TransactionSigner.ts    # 签名和验证
-│   │   └── TransactionBuilder.ts   # 交易构建器
-│   ├── merkle/              # Merkle 树 ✅
-│   │   └── MerkleTree.ts    # Merkle 树构建和验证
-│   ├── blockchain/          # 区块链核心 ✅
-│   │   ├── Block.ts         # 区块结构
-│   │   ├── Blockchain.ts    # 区块链管理
-│   │   ├── ProofOfWork.ts   # 工作量证明
-│   │   └── Miner.ts         # 矿工系统
-│   ├── utils/               # 工具函数
-│   │   └── base58.ts        # Base58 编码
-│   └── examples/            # 示例代码
-│       └── demo.ts          # 完整演示
-└── docs/
-    ├── TECH_DESIGN.md       # 技术设计文档
-    ├── PLAN.md              # 实现计划
-    ├── ARTICLE_PART1.md     # 教程：Part 1 - 基础设施
-    ├── ARTICLE_PART2.md     # 教程：Part 2 - 交易系统
-    └── ARTICLE_PART3.md     # 教程：Part 3 - 区块链与挖矿
+│   ├── blockchain/     # Blocks, chain state, mining, and proof of work
+│   ├── crypto/         # Hashing and signature helpers
+│   ├── examples/       # Command-line demonstration
+│   ├── merkle/         # Merkle trees and proofs
+│   ├── script/         # Simplified stack-based script system
+│   ├── server/         # Express API and in-memory simulator state
+│   ├── transaction/    # Transactions, UTXOs, signing, and construction
+│   ├── utils/          # Base58 utilities
+│   └── wallet/         # Key pairs, addresses, and wallet behavior
+├── frontend/           # React and Vite interface
+├── docs/               # Design notes, tutorials, and project references
+├── package.json
+└── tsconfig.json
 ```
 
-## 核心概念
+## Core concepts
 
-### UTXO 模型
+### UTXOs and transactions
 
-UTXO (Unspent Transaction Output) 是比特币的账户模型。每笔交易消费之前的 UTXO，创建新的 UTXO。
+Balances are derived from unspent transaction outputs rather than stored directly on a wallet. A transaction consumes existing outputs and creates new outputs for recipients and, when needed, change.
 
 ```typescript
-// 创建钱包
 const alice = new Wallet()
 const bob = new Wallet()
-
-// 创建 UTXO 集合
 const utxoSet = new UTXOSet()
 
-// 添加 UTXO（Alice 有 100 BTC）
 utxoSet.add('genesis_tx', 0, new TxOutput(100, alice.address))
 
-// 查看余额
-console.log('Alice 余额:', utxoSet.getBalance(alice.address))
-```
-
-### 交易系统
-
-使用 TransactionBuilder 轻松构建交易，自动处理 UTXO 选择和找零。
-
-```typescript
-// 简单转账
-const tx = new TransactionBuilder(utxoSet)
+const transaction = new TransactionBuilder(utxoSet)
   .from(alice)
   .to(bob.address, 60)
   .buildAndSign()
-
-// 多人转账
-const tx = new TransactionBuilder(utxoSet)
-  .from(alice)
-  .to(bob.address, 30)
-  .to(charlie.address, 20)
-  .buildAndSign()
-
-// 或使用静态方法
-const tx = TransactionBuilder.createSimpleTransfer(
-  alice,
-  bob.address,
-  60,
-  utxoSet
-)
 ```
 
-### 交易验证
+### Independent input signatures
 
-每笔交易都经过两层验证：签名验证和所有权验证。
-
-```typescript
-// 验证交易
-const utxoMap = new Map()
-for (const input of tx.inputs) {
-  const utxo = utxoSet.get(input.txId, input.outputIndex)
-  if (utxo) {
-    utxoMap.set(`${input.txId}:${input.outputIndex}`, {
-      amount: utxo.amount,
-      address: utxo.address,
-    })
-  }
-}
-
-const isValid = TransactionSigner.verifyTransaction(tx, utxoMap)
-console.log('交易是否有效:', isValid)
-```
-
-### 多方交易（新功能！）
-
-支持多个参与者共同创建一笔交易，每个人签名自己的输入：
+Transactions may contain inputs owned by different wallets. Each owner signs only the corresponding input:
 
 ```typescript
-// Alice 和 Bob 合作转账
-const alice = new Wallet()
-const bob = new Wallet()
-const charlie = new Wallet()
-
-// 创建交易：Alice 和 Bob 的输入
-const tx = new Transaction(
-  [
-    new TxInput('tx_alice', 0),
-    new TxInput('tx_bob', 0)
-  ],
-  [new TxOutput(75, charlie.address)]
+const transaction = new Transaction(
+  [new TxInput('alice_tx', 0), new TxInput('bob_tx', 0)],
+  [new TxOutput(75, recipient.address)]
 )
 
-// 方式 1：分别签名（支持异步）
-TransactionSigner.signInput(tx, 0, alice)
-TransactionSigner.signInput(tx, 1, bob)
-
-// 方式 2：使用钱包数组
-TransactionSigner.signTransactionWithWallets(tx, [alice, bob])
-
-// 方式 3：使用钱包映射
-const walletMap = new Map()
-walletMap.set(alice.address, alice)
-walletMap.set(bob.address, bob)
-TransactionSigner.signTransactionWithWalletMap(tx, walletMap, utxoSet)
-
-// 每个输入的签名都是唯一的！
-console.log('签名相同?', tx.inputs[0].signature === tx.inputs[1].signature) // false
+TransactionSigner.signInput(transaction, 0, alice)
+TransactionSigner.signInput(transaction, 1, bob)
 ```
 
-详细文档：[多方交易支持](./docs/MULTI_PARTY_TRANSACTIONS.md)
+See [Multi-party Transactions](./docs/MULTI_PARTY_TRANSACTIONS.md) for a detailed discussion. That document may include content in another language; the root README is maintained in English.
 
-### Coinbase 交易
+### Blocks and mining
 
-Coinbase 交易是矿工奖励交易，凭空创造新的比特币。
-
-```typescript
-// 创建 Coinbase 交易
-const coinbase = Transaction.createCoinbase(
-  minerAddress,
-  50,  // 区块奖励
-  1    // 区块高度
-)
-
-console.log('是 Coinbase 交易:', coinbase.isCoinbase())
-```
-
-## 使用示例
-
-### 完整的交易流程
+The simulator groups transactions into blocks, calculates a Merkle root, links each block to its predecessor, and searches for a nonce whose hash satisfies a simplified difficulty target.
 
 ```typescript
-import { Wallet } from './wallet/Wallet'
-import { UTXOSet } from './transaction/UTXO'
-import { TxOutput } from './transaction/TxOutput'
-import { TransactionBuilder } from './transaction/TransactionBuilder'
-import { TransactionSigner } from './transaction/TransactionSigner'
-import { Transaction } from './transaction/Transaction'
-
-// 1. 创建钱包
-const alice = new Wallet()
-const bob = new Wallet()
-const charlie = new Wallet()
-
-console.log('Alice 地址:', alice.address)
-console.log('Bob 地址:', bob.address)
-
-// 2. 创建 UTXO 集合并初始化
-const utxoSet = new UTXOSet()
-
-// 创建 Coinbase 交易（挖矿奖励）给 Alice
-const coinbase = Transaction.createCoinbase(alice.address, 100, 0)
-utxoSet.add(coinbase.id, 0, coinbase.outputs[0])
-
-console.log('Alice 初始余额:', utxoSet.getBalance(alice.address))
-
-// 3. Alice 向 Bob 转账 60 BTC
-const tx1 = new TransactionBuilder(utxoSet)
-  .from(alice)
-  .to(bob.address, 60)
-  .buildAndSign()
-
-console.log('交易 ID:', tx1.id)
-console.log('输入数量:', tx1.inputs.length)
-console.log('输出数量:', tx1.outputs.length)
-
-// 4. 验证交易
-const utxoMap = new Map()
-for (const input of tx1.inputs) {
-  const utxo = utxoSet.get(input.txId, input.outputIndex)
-  if (utxo) {
-    utxoMap.set(`${input.txId}:${input.outputIndex}`, {
-      amount: utxo.amount,
-      address: utxo.address,
-    })
-  }
-}
-
-const isValid = TransactionSigner.verifyTransaction(tx1, utxoMap)
-console.log('交易验证:', isValid ? '✓ 通过' : '✗ 失败')
-
-// 5. 执行交易（更新 UTXO 集合）
-if (isValid) {
-  // 移除已花费的 UTXO
-  for (const input of tx1.inputs) {
-    utxoSet.remove(input.txId, input.outputIndex)
-  }
-
-  // 添加新的 UTXO
-  for (let i = 0; i < tx1.outputs.length; i++) {
-    utxoSet.add(tx1.id, i, tx1.outputs[i])
-  }
-}
-
-// 6. 查看余额
-console.log('Alice 余额:', utxoSet.getBalance(alice.address))
-console.log('Bob 余额:', utxoSet.getBalance(bob.address))
-
-// 7. Alice 向多人转账
-const tx2 = new TransactionBuilder(utxoSet)
-  .from(alice)
-  .to(bob.address, 10)
-  .to(charlie.address, 20)
-  .buildAndSign()
-
-console.log('多人转账完成')
-console.log('输出数量:', tx2.outputs.length)  // 3个输出：Bob、Charlie、找零
-```
-
-### 区块链与挖矿
-
-```typescript
-import { Blockchain, Block, Miner } from './blockchain'
-import { Transaction } from './transaction'
-import { Wallet } from './wallet'
-
-// 1. 创建区块链
 const blockchain = new Blockchain({
   initialDifficulty: 2,
   blockReward: 50,
   targetBlockTime: 10,
-  difficultyAdjustmentInterval: 10
+  difficultyAdjustmentInterval: 10,
 })
 
-// 2. 创建钱包
-const minerWallet = new Wallet()
-const alice = new Wallet()
-const bob = new Wallet()
-
-// 3. 创建创世区块
-const genesisCoinbase = Transaction.createCoinbase(minerWallet.address, 50, 0)
-const genesisBlock = Block.createGenesisBlock(genesisCoinbase)
-blockchain.initializeWithGenesisBlock(genesisBlock)
-
-console.log('创世区块已创建')
-console.log('矿工余额:', blockchain.getUTXOSet().getBalance(minerWallet.address))
-// 输出: 矿工余额: 50
-
-// 4. 创建矿工并挖矿
 const miner = new Miner(minerWallet, blockchain)
-const { block, miningResult } = miner.mineEmptyBlock()
-
-console.log('挖矿成功！')
-console.log('  区块哈希:', miningResult.hash)
-console.log('  Nonce:', miningResult.nonce)
-console.log('  尝试次数:', miningResult.attempts)
-console.log('  用时:', miningResult.duration, 'ms')
-
-// 5. 将区块添加到区块链
+const {block} = miner.mineEmptyBlock()
 blockchain.addBlock(block)
-console.log('矿工余额:', blockchain.getUTXOSet().getBalance(minerWallet.address))
-// 输出: 矿工余额: 100
-
-// 6. 矿工转账给 Alice
-const utxoSet = blockchain.getUTXOSet()
-const tx = TransactionBuilder.createSimpleTransfer(
-  minerWallet,
-  alice.address,
-  30,
-  utxoSet
-)
-
-// 7. 挖矿打包交易
-const { block: block2 } = miner.mineBlock([tx])
-blockchain.addBlock(block2)
-
-console.log('Alice 余额:', blockchain.getUTXOSet().getBalance(alice.address))
-// 输出: Alice 余额: 30
-
-// 8. 查看区块链状态
-const stats = blockchain.getStats()
-console.log('区块链长度:', stats.length)
-console.log('当前难度:', stats.difficulty)
-console.log('UTXO 数量:', stats.utxoCount)
-
-// 9. 验证区块链
-console.log('区块链有效:', blockchain.isValidChain())
 ```
 
-### Merkle 树
+### Merkle proofs
 
 ```typescript
-import { MerkleTree } from './merkle'
-
-// 创建 Merkle 树
-const transactions = ['tx1', 'tx2', 'tx3', 'tx4']
-const tree = new MerkleTree(transactions)
-
-// 获取 Merkle 根
+const tree = new MerkleTree(['tx1', 'tx2', 'tx3', 'tx4'])
 const root = tree.getRoot()
-console.log('Merkle 根:', root)
-
-// 生成 Merkle 证明
 const proof = tree.getProof('tx1')
-console.log('Merkle 证明:', proof)
-
-// 验证 Merkle 证明
 const isValid = MerkleTree.verify('tx1', proof, root)
-console.log('证明有效:', isValid)  // true
 ```
 
-### 运行测试
+## Additional documentation
 
-```bash
-# 运行所有测试
-npm test
+- [Technical Design](./docs/TECH_DESIGN.md)
+- [Implementation Plan](./docs/PLAN.md)
+- [Tutorial: Part 1](./docs/ARTICLE_PART1.md)
+- [Tutorial: Part 2](./docs/ARTICLE_PART2.md)
+- [Tutorial: Part 3](./docs/ARTICLE_PART3.md)
+- [Tutorial: Part 4](./docs/ARTICLE_PART4.md)
+- [Multi-party Transactions](./docs/MULTI_PARTY_TRANSACTIONS.md)
+- [Real Bitcoin Compared with This Simulator](./docs/REAL_BITCOIN_VS_OUR_IMPLEMENTATION.md)
 
-# 运行特定测试
-npm test -- --testPathPattern="Transaction.test"
-npm test -- --testPathPattern="TransactionBuilder.test"
+## Educational scope and limitations
 
-# 查看测试覆盖率
-npm test -- --coverage
-```
+Bitcoin Simplifier deliberately trades protocol completeness for readability and fast local experimentation. In particular:
 
-## 技术文档
+- There is no peer-to-peer networking or node discovery.
+- State is held in memory and is reset when the server restarts.
+- The simulator does not parse or relay Bitcoin network messages.
+- Addresses, transaction formats, consensus rules, and script behavior are simplified and are not Bitcoin-compatible in every detail.
+- Difficulty adjustment and proof-of-work targets are designed for quick demonstrations.
+- UTXO selection uses a simple greedy strategy.
+- There is no mempool policy, block-size policy, wallet encryption, or secure key storage.
 
-- [技术设计文档](./docs/TECH_DESIGN.md) - 完整的技术架构和设计
-- [实现计划](./docs/PLAN.md) - 分阶段的实现路线图
-- [教程 Part 1](./docs/ARTICLE_PART1.md) - 实现一个简单的比特币：基础设施
-- [教程 Part 2](./docs/ARTICLE_PART2.md) - 实现一个简单的比特币：交易系统
-- [教程 Part 3](./docs/ARTICLE_PART3.md) - 实现一个简单的比特币：区块链与挖矿
-- [多方交易支持](./docs/MULTI_PARTY_TRANSACTIONS.md) - 支持多个参与者的交易
+The implementation is intended for learning, demonstrations, and code exploration. It should not be used as a wallet, node, payment system, security reference, or basis for financial software.
 
-## 实现进度
+## Disclaimer
 
-### 已完成 ✅
+This repository is educational software. It does not provide financial, investment, or security advice and must not be used with real funds or production credentials. Cryptographic keys generated by the simulator are local demonstration data and should never be reused elsewhere.
 
-- ✅ **Milestone 1**: 文档与基础设施
-- ✅ **Milestone 2**: 密码学基础（SHA-256, ECDSA）
-- ✅ **Milestone 3**: 钱包与 UTXO 模型
-- ✅ **Milestone 4**: 交易系统（构建、签名、验证）
-- ✅ **Milestone 5**: 区块链核心（Merkle 树、区块、PoW 挖矿）
+## References
 
-### 规划中 🚧
-
-- 🚧 **Milestone 4.5**: 脚本系统（可选扩展）
-- 🚧 **Milestone 6**: 验证与演示
-
-## 限制说明
-
-本实现为教学目的，做了以下简化：
-
-- ❌ 无 P2P 网络层
-- ❌ 无持久化存储
-- ❌ 无完整的比特币脚本系统（计划实现简化版）
-- ❌ 简化的难度调整算法
-- ❌ 无区块大小限制
-- ❌ 简化的 UTXO 选择算法（贪心算法）
-
-## 学习路径
-
-### 推荐学习顺序
-
-1. **阅读教程文章**
-   - [Part 1: 基础设施](./docs/ARTICLE_PART1.md) - 密码学、钱包、UTXO
-   - [Part 2: 交易系统](./docs/ARTICLE_PART2.md) - 交易构建、签名、验证
-   - [Part 3: 区块链与挖矿](./docs/ARTICLE_PART3.md) - Merkle 树、区块、工作量证明
-
-2. **理解核心代码**
-   - `src/crypto/` - 密码学基础（哈希、签名）
-   - `src/wallet/` - 钱包系统（密钥对、地址生成）
-   - `src/transaction/` - 交易系统（UTXO、交易构建）
-   - `src/merkle/` - Merkle 树（高效验证）
-   - `src/blockchain/` - 区块链核心（区块、PoW、挖矿）
-
-3. **运行测试用例**
-   - `src/**/__tests__/` - 220+ 测试用例，覆盖所有功能
-
-4. **阅读技术文档**
-   - [技术设计文档](./docs/TECH_DESIGN.md) - 完整的架构设计
-   - [实现计划](./docs/PLAN.md) - 分阶段的实现路线
-
-## 参考资料
-
-- [Bitcoin Whitepaper](https://bitcoin.org/bitcoin.pdf)
+- [Bitcoin white paper](https://bitcoin.org/bitcoin.pdf)
 - [Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook)
 - [Bitcoin Developer Guide](https://developer.bitcoin.org/devguide/)
 
 ## License
 
-MIT License
-
+MIT
