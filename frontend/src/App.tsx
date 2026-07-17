@@ -33,7 +33,7 @@ function App() {
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
                     >
                       <Blocks className="w-5 h-5" />
-                      区块链
+                      Blockchain
                     </Link>
                   </li>
                   <li>
@@ -42,7 +42,7 @@ function App() {
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
                     >
                       <Wallet className="w-5 h-5" />
-                      钱包
+                      Wallets
                     </Link>
                   </li>
                   <li>
@@ -51,7 +51,7 @@ function App() {
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
                     >
                       <Send className="w-5 h-5" />
-                      创建交易
+                      Create Transaction
                     </Link>
                   </li>
                   <li>
@@ -60,7 +60,7 @@ function App() {
                       className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
                     >
                       <Pickaxe className="w-5 h-5" />
-                      挖矿
+                      Mining
                     </Link>
                   </li>
                   <li>
