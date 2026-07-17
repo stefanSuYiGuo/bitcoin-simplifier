@@ -1,7 +1,7 @@
 import {Hash} from '../crypto'
 
 /**
- * Merkle 树节点
+ * Merkle tree node.
  */
 export interface MerkleNode {
   hash: string
@@ -10,7 +10,7 @@ export interface MerkleNode {
 }
 
 /**
- * Merkle 证明的一个元素
+ * Element in a Merkle proof.
  */
 export interface MerkleProofElement {
   hash: string
@@ -18,11 +18,11 @@ export interface MerkleProofElement {
 }
 
 /**
- * Merkle 树实现（纯指针式）
- * 用于高效验证交易是否在区块中
+ * Pointer-based Merkle tree implementation.
+ * Efficiently verifies whether a transaction belongs to a block.
  *
- * 实现方式：使用对象引用（left/right）构建真正的树形结构，
- * 而不是数组索引计算。这使得代码更直观、类型更安全。
+ * Uses left and right object references to build an actual tree rather than
+ * calculating array indices, making the code clearer and type-safe.
  */
 export class MerkleTree {
   private root: MerkleNode | null = null
@@ -30,7 +30,7 @@ export class MerkleTree {
 
   constructor(data: string[]) {
     if (data.length === 0) {
-      throw new Error('Merkle 树至少需要一个数据元素')
+      throw new Error('A Merkle tree requires at least one data element')
     }
 
     this.leaves = data.map((item) => Hash.sha256(item))
@@ -38,28 +38,28 @@ export class MerkleTree {
   }
 
   /**
-   * 构建 Merkle 树
+   * Build the Merkle tree.
    */
   private buildTree(hashes: string[]): MerkleNode {
-    // 创建叶子节点
+    // Create leaf nodes
     const leafNodes: MerkleNode[] = hashes.map((hash) => ({hash}))
 
-    // 递归构建树
+    // Build the tree recursively
     return this.buildTreeFromNodes(leafNodes)
   }
 
   /**
-   * 从节点数组构建树（纯指针式）
+   * Build a pointer-based tree from an array of nodes.
    */
   private buildTreeFromNodes(nodes: MerkleNode[]): MerkleNode {
-    // 如果只有一个节点，它就是根节点
+    // A single remaining node is the root
     if (nodes.length === 1) {
       return nodes[0]
     }
 
     const parentNodes: MerkleNode[] = []
 
-    // 两两配对构建父节点
+    // Pair nodes to build their parents
     for (let i = 0; i < nodes.length; i += 2) {
       const left = nodes[i]
       const right = i + 1 < nodes.length ? nodes[i + 1] : nodes[i]
@@ -73,65 +73,64 @@ export class MerkleTree {
       parentNodes.push(parent)
     }
 
-    // 递归构建上层
+    // Build the next level recursively
     return this.buildTreeFromNodes(parentNodes)
   }
 
   /**
-   * 获取 Merkle 根哈希
+   * Get the Merkle root hash.
    */
   getRoot(): string {
     if (!this.root) {
-      throw new Error('Merkle 树未构建')
+      throw new Error('Merkle tree has not been built')
     }
     return this.root.hash
   }
 
   /**
-   * 获取完整的树节点结构
+   * Get the complete tree node structure.
    */
   getRootNode(): MerkleNode | null {
     return this.root
   }
 
   /**
-   * 生成 Merkle 证明
-   * 用于证明某个数据在树中
+   * Generate a Merkle proof that data belongs to the tree.
    */
   getProof(data: string): MerkleProofElement[] {
     const targetHash = Hash.sha256(data)
 
     if (!this.root) {
-      throw new Error('Merkle 树未构建')
+      throw new Error('Merkle tree has not been built')
     }
 
     const proof = this.buildProof(targetHash, this.root)
 
     if (!proof) {
-      throw new Error('数据不在 Merkle 树中')
+      throw new Error('Data is not present in the Merkle tree')
     }
 
     return proof
   }
 
   /**
-   * 构建 Merkle 证明路径（纯指针式）
-   * 从根节点开始递归查找目标哈希，并收集路径上的兄弟节点
+   * Build a pointer-based Merkle proof path.
+   * Recursively searches from the root and collects sibling nodes along the path.
    */
   private buildProof(
     targetHash: string,
     node: MerkleNode
   ): MerkleProofElement[] | null {
-    // 如果是叶子节点
+    // Check a leaf node
     if (!node.left && !node.right) {
       return node.hash === targetHash ? [] : null
     }
 
-    // 在左子树中查找
+    // Search the left subtree
     if (node.left) {
       const leftProof = this.buildProof(targetHash, node.left)
       if (leftProof !== null) {
-        // 找到了，添加右兄弟节点到证明中
+        // Add the right sibling to the proof
         if (node.right) {
           leftProof.push({
             hash: node.right.hash,
@@ -142,11 +141,11 @@ export class MerkleTree {
       }
     }
 
-    // 在右子树中查找
+    // Search the right subtree
     if (node.right) {
       const rightProof = this.buildProof(targetHash, node.right)
       if (rightProof !== null) {
-        // 找到了，添加左兄弟节点到证明中
+        // Add the left sibling to the proof
         if (node.left) {
           rightProof.push({
             hash: node.left.hash,
@@ -157,12 +156,12 @@ export class MerkleTree {
       }
     }
 
-    // 未找到
+    // Target not found
     return null
   }
 
   /**
-   * 验证 Merkle 证明
+   * Verify a Merkle proof.
    */
   static verify(
     data: string,
@@ -183,21 +182,21 @@ export class MerkleTree {
   }
 
   /**
-   * 获取叶子节点数量
+   * Get the number of leaf nodes.
    */
   getLeafCount(): number {
     return this.leaves.length
   }
 
   /**
-   * 获取树的高度
+   * Get the tree height.
    */
   getHeight(): number {
     return Math.ceil(Math.log2(this.leaves.length)) + 1
   }
 
   /**
-   * 将树转换为 JSON 格式（用于调试）
+   * Convert the tree to JSON for debugging.
    */
   toJSON(): object {
     return {
