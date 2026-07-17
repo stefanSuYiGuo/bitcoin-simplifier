@@ -1,8 +1,8 @@
 import {Wallet} from '../Wallet'
 
 describe('Wallet', () => {
-  describe('构造函数', () => {
-    it('应该创建新钱包', () => {
+  describe('constructor', () => {
+    it('creates a new wallet', () => {
       const wallet = new Wallet()
 
       expect(wallet.privateKey).toBeTruthy()
@@ -10,7 +10,7 @@ describe('Wallet', () => {
       expect(wallet.address).toBeTruthy()
     })
 
-    it('应该从私钥创建钱包', () => {
+    it('creates a wallet from a private key', () => {
       const wallet1 = new Wallet()
       const privateKey = wallet1.privateKey
 
@@ -21,7 +21,7 @@ describe('Wallet', () => {
       expect(wallet2.address).toBe(wallet1.address)
     })
 
-    it('不同钱包应该有不同地址', () => {
+    it('creates distinct addresses for different wallets', () => {
       const wallet1 = new Wallet()
       const wallet2 = new Wallet()
 
@@ -29,24 +29,24 @@ describe('Wallet', () => {
     })
   })
 
-  describe('地址生成', () => {
-    it('地址应该是 Base58 格式', () => {
+  describe('address generation', () => {
+    it('generates a Base58 address', () => {
       const wallet = new Wallet()
 
-      // Base58 字符集（不包含 0, O, I, l）
+      // The Base58 alphabet excludes 0, O, I, and l
       const base58Regex =
         /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/
       expect(wallet.address).toMatch(base58Regex)
     })
 
-    it('地址长度应该在合理范围内', () => {
+    it('generates an address within the expected length range', () => {
       const wallet = new Wallet()
 
       expect(wallet.address.length).toBeGreaterThanOrEqual(20)
       expect(wallet.address.length).toBeLessThanOrEqual(40)
     })
 
-    it('相同私钥应该生成相同地址', () => {
+    it('generates the same address from the same private key', () => {
       const wallet1 = new Wallet()
       const wallet2 = new Wallet(wallet1.privateKey)
 
@@ -54,8 +54,8 @@ describe('Wallet', () => {
     })
   })
 
-  describe('签名和验证', () => {
-    it('应该能够签名和验证数据', () => {
+  describe('signing and verification', () => {
+    it('signs and verifies data', () => {
       const wallet = new Wallet()
       const data = 'transaction data'
 
@@ -66,7 +66,7 @@ describe('Wallet', () => {
       expect(isValid).toBe(true)
     })
 
-    it('修改数据后签名应该无效', () => {
+    it('rejects a signature after the data changes', () => {
       const wallet = new Wallet()
       const data = 'original data'
 
@@ -76,7 +76,7 @@ describe('Wallet', () => {
       expect(isValid).toBe(false)
     })
 
-    it('应该能够签名交易对象', () => {
+    it('signs a transaction object', () => {
       const wallet = new Wallet()
       const transaction = {
         from: wallet.address,
@@ -91,37 +91,37 @@ describe('Wallet', () => {
       expect(isValid).toBe(true)
     })
 
-    it('应该支持跨钱包验证签名（真实比特币场景）', () => {
-      // Alice 创建钱包并签名交易
+    it('supports signature verification by another participant', () => {
+      // Alice creates a wallet and signs a transaction
       const alice = new Wallet()
       const bob = new Wallet()
 
-      // 构建交易，包含公钥字段
+      // Build a transaction that includes the public key
       const transaction = {
         from: alice.address,
         to: bob.address,
         amount: 50,
-        publicKey: alice.publicKey, // 交易中包含发送者的公钥
+        publicKey: alice.publicKey, // Include the sender's public key
       }
       const txData = JSON.stringify(transaction)
 
-      // Alice 签名交易
+      // Alice signs the transaction
       const signature = alice.sign(txData)
 
-      // Bob（或矿工）从交易中获取公钥并验证签名
-      // 这是比特币交易验证的真实场景
+      // Bob or a miner reads the public key and verifies the signature
+      // This demonstrates the core verification relationship
       const {Signature} = require('../../crypto/signature')
-      const publicKeyFromTx = transaction.publicKey // 从交易中获取公钥
+      const publicKeyFromTx = transaction.publicKey // Read it from the transaction
       const isValid = Signature.verify(txData, signature, publicKeyFromTx)
 
       expect(isValid).toBe(true)
     })
 
-    it('使用错误的公钥验证应该失败', () => {
+    it('rejects verification with the wrong public key', () => {
       const alice = new Wallet()
       const bob = new Wallet()
 
-      // Alice 创建交易
+      // Alice creates a transaction
       const transaction = {
         data: 'transaction data',
         publicKey: alice.publicKey,
@@ -129,13 +129,13 @@ describe('Wallet', () => {
       const txData = JSON.stringify(transaction)
       const signature = alice.sign(txData)
 
-      // 如果有人篡改交易中的公钥为 Bob 的公钥
+      // Replace the transaction public key with Bob's
       const tamperedTransaction = {
         ...transaction,
-        publicKey: bob.publicKey, // 篡改为 Bob 的公钥
+        publicKey: bob.publicKey, // Tamper with the public key
       }
 
-      // 尝试用篡改后的公钥验证 Alice 的签名应该失败
+      // Alice's signature should fail verification with the tampered key
       const {Signature} = require('../../crypto/signature')
       const isValid = Signature.verify(
         txData,
@@ -146,20 +146,20 @@ describe('Wallet', () => {
       expect(isValid).toBe(false)
     })
 
-    it('交易场景：完整的签名和验证流程', () => {
-      // 创建三个用户
+    it('demonstrates a complete signing and verification flow', () => {
+      // Create three participants
       const alice = new Wallet()
       const bob = new Wallet()
       const miner = new Wallet()
 
-      // Alice 想给 Bob 转账，创建交易
+      // Alice creates a transaction that pays Bob
       const transaction = {
         inputs: [
           {
             txId: 'prev_tx_id',
             outputIndex: 0,
-            publicKey: alice.publicKey, // 交易中包含公钥
-            signature: '', // 签名字段初始为空
+            publicKey: alice.publicKey, // Include the public key
+            signature: '', // Start with an empty signature
           },
         ],
         outputs: [
@@ -174,104 +174,104 @@ describe('Wallet', () => {
       const txData = JSON.stringify(transaction)
       const signature = alice.sign(txData)
 
-      // 将签名添加到交易中
+      // Add the signature to the transaction
       transaction.inputs[0].signature = signature
 
-      // 矿工从交易输入中获取公钥并验证签名
+      // The miner reads the input public key and verifies the signature
       const {Signature} = require('../../crypto/signature')
-      const publicKeyFromInput = transaction.inputs[0].publicKey // 从交易中获取
+      const publicKeyFromInput = transaction.inputs[0].publicKey // Read it from the transaction
       const isValidForMiner = Signature.verify(
         txData,
         signature,
         publicKeyFromInput
       )
 
-      // Bob 也可以从交易中获取公钥来验证
-      const publicKeyForBob = transaction.inputs[0].publicKey // 从交易中获取
+      // Bob can also read the public key and verify the signature
+      const publicKeyForBob = transaction.inputs[0].publicKey // Read it from the transaction
       const isValidForBob = Signature.verify(txData, signature, publicKeyForBob)
 
       expect(isValidForMiner).toBe(true)
       expect(isValidForBob).toBe(true)
 
-      // 验证公钥对应的地址（额外的安全检查）
-      // 在真实场景中，还需要验证公钥对应的地址是否拥有被引用的 UTXO
+      // Derive the address as an additional ownership check
+      // A real validation flow must also confirm ownership of the referenced UTXO
       const {Hash} = require('../../crypto/hash')
       const {encodeBase58} = require('../../utils/base58')
       const sha256Hash = Hash.sha256(publicKeyFromInput)
       const ripemd160Hash = Hash.ripemd160(sha256Hash)
       const addressFromPublicKey = encodeBase58(ripemd160Hash)
 
-      // 这个地址应该匹配 Alice 的地址
+      // The derived address should match Alice's address
       expect(addressFromPublicKey).toBe(alice.address)
     })
 
-    it('无法伪造他人的交易（安全性测试）', () => {
+    it('prevents one wallet from forging another wallet\'s transaction', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const {Signature} = require('../../crypto/signature')
 
-      // 场景：Bob 想伪造 Alice 的交易，盗取 Alice 的比特币
+      // Bob attempts to forge a transaction spending Alice's funds
 
-      // 尝试 1：Bob 创建交易，使用 Alice 的公钥，但用自己的私钥签名
+      // Attempt 1: Bob uses Alice's public key but signs with his own private key
       const transaction1 = {
         from: alice.address,
         to: bob.address,
         amount: 100,
-        publicKey: alice.publicKey, // 使用 Alice 的公钥
+        publicKey: alice.publicKey, // Use Alice's public key
       }
       const txData1 = JSON.stringify(transaction1)
-      const bobSignature = bob.sign(txData1) // Bob 用自己的私钥签名
+      const bobSignature = bob.sign(txData1) // Bob signs with his private key
 
-      // 验证失败：签名与公钥不匹配
+      // Verification fails because the signature and public key do not match
       const isValid1 = Signature.verify(
         txData1,
         bobSignature,
         transaction1.publicKey
       )
-      expect(isValid1).toBe(false) // Bob 的签名无法通过 Alice 公钥的验证
+      expect(isValid1).toBe(false) // Bob's signature cannot be verified with Alice's public key
 
-      // 尝试 2：Bob 使用自己的公钥，但试图从 Alice 的地址转账
+      // Attempt 2: Bob uses his public key but claims to spend from Alice's address
       const transaction2 = {
-        from: alice.address, // 声称从 Alice 转账
+        from: alice.address, // Claim to send from Alice
         to: bob.address,
         amount: 100,
-        publicKey: bob.publicKey, // 使用 Bob 自己的公钥
+        publicKey: bob.publicKey, // Use Bob's public key
       }
       const txData2 = JSON.stringify(transaction2)
-      const bobSignature2 = bob.sign(txData2) // Bob 用自己的私钥签名
+      const bobSignature2 = bob.sign(txData2) // Bob signs with his private key
 
-      // 签名验证通过，但地址验证失败
+      // Signature verification succeeds, but address verification fails
       const isSignatureValid = Signature.verify(
         txData2,
         bobSignature2,
         transaction2.publicKey
       )
-      expect(isSignatureValid).toBe(true) // 签名本身是有效的
+      expect(isSignatureValid).toBe(true) // The signature itself is valid
 
-      // 但是！公钥对应的地址不是 Alice 的地址
+      // The address derived from the public key is not Alice's
       const {Hash} = require('../../crypto/hash')
       const {encodeBase58} = require('../../utils/base58')
       const sha256Hash = Hash.sha256(transaction2.publicKey)
       const ripemd160Hash = Hash.ripemd160(sha256Hash)
       const addressFromPublicKey = encodeBase58(ripemd160Hash)
 
-      expect(addressFromPublicKey).not.toBe(alice.address) // 地址不匹配！
-      expect(addressFromPublicKey).toBe(bob.address) // 实际是 Bob 的地址
+      expect(addressFromPublicKey).not.toBe(alice.address) // The addresses do not match
+      expect(addressFromPublicKey).toBe(bob.address) // It is Bob's address
 
-      // 结论：系统会拒绝这笔交易，因为：
-      // 1. 交易声称从 Alice 的地址转账
-      // 2. 但公钥对应的是 Bob 的地址
-      // 3. 这意味着 Bob 没有权限花费 Alice 的 UTXO
+      // The system rejects the transaction because:
+      // 1. It claims to spend from Alice's address
+      // 2. The public key maps to Bob's address
+      // 3. Bob therefore cannot spend Alice's UTXO
     })
 
-    it('只有拥有私钥的人才能创建有效交易', () => {
+    it('requires the private key owner to create a valid transaction', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const {Signature} = require('../../crypto/signature')
       const {Hash} = require('../../crypto/hash')
       const {encodeBase58} = require('../../utils/base58')
 
-      // Alice 创建正确的交易
+      // Alice creates a valid transaction
       const validTransaction = {
         from: alice.address,
         to: bob.address,
@@ -281,7 +281,7 @@ describe('Wallet', () => {
       const txData = JSON.stringify(validTransaction)
       const aliceSignature = alice.sign(txData)
 
-      // 验证签名
+      // Verify the signature
       const isSignatureValid = Signature.verify(
         txData,
         aliceSignature,
@@ -289,120 +289,120 @@ describe('Wallet', () => {
       )
       expect(isSignatureValid).toBe(true)
 
-      // 验证公钥对应的地址
+      // Verify the address derived from the public key
       const sha256Hash = Hash.sha256(validTransaction.publicKey)
       const ripemd160Hash = Hash.ripemd160(sha256Hash)
       const addressFromPublicKey = encodeBase58(ripemd160Hash)
       expect(addressFromPublicKey).toBe(alice.address)
 
-      // 只有两个验证都通过，交易才有效：
-      // ✓ 签名有效（证明签名者拥有私钥）
-      // ✓ 地址匹配（证明签名者有权花费这个地址的 UTXO）
+      // Both checks must pass for the transaction to be valid:
+      // ✓ The signature proves control of the private key
+      // ✓ The address match proves authority to spend the UTXO
       const isTransactionValid =
         isSignatureValid && addressFromPublicKey === validTransaction.from
 
       expect(isTransactionValid).toBe(true)
     })
 
-    it('详细解释：Bob 放入自己的公钥也无法偷取 Alice 的 UTXO', () => {
+    it('shows why Bob cannot spend Alice\'s UTXO with his own public key', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const {Signature} = require('../../crypto/signature')
       const {Hash} = require('../../crypto/hash')
       const {encodeBase58} = require('../../utils/base58')
 
-      // 假设 Alice 有一个 UTXO
+      // Alice owns a UTXO
       const aliceUTXO = {
         txId: 'utxo_123',
         outputIndex: 0,
         amount: 100,
-        ownerAddress: alice.address, // 这个 UTXO 属于 Alice
+        ownerAddress: alice.address, // This UTXO belongs to Alice
       }
 
-      // Bob 想偷这个 UTXO，他创建一个交易
+      // Bob creates a transaction that attempts to spend it
       const bobFakeTransaction = {
         inputs: [
           {
-            txId: aliceUTXO.txId, // 引用 Alice 的 UTXO
+            txId: aliceUTXO.txId, // Reference Alice's UTXO
             outputIndex: aliceUTXO.outputIndex,
-            publicKey: bob.publicKey, // Bob 放入自己的公钥
+            publicKey: bob.publicKey, // Bob supplies his public key
           },
         ],
         outputs: [
           {
             amount: 100,
-            address: bob.address, // 转给自己
+            address: bob.address, // Pay himself
           },
         ],
       }
 
       const txData = JSON.stringify(bobFakeTransaction)
-      const bobSignature = bob.sign(txData) // Bob 用自己的私钥签名
+      const bobSignature = bob.sign(txData) // Bob signs with his private key
 
-      // === 验证过程 ===
+      // === Verification process ===
 
-      // 第一步：验证签名（会通过）
+      // Step 1: Verify the signature, which succeeds
       const publicKeyFromTx = bobFakeTransaction.inputs[0].publicKey
       const isSignatureValid = Signature.verify(
         txData,
         bobSignature,
         publicKeyFromTx
       )
-      expect(isSignatureValid).toBe(true) // ✓ 签名是有效的
+      expect(isSignatureValid).toBe(true) // ✓ The signature is valid
 
-      // 第二步：验证权限（会失败！）
-      // 从交易中的公钥计算地址
+      // Step 2: Verify spending authority, which fails
+      // Derive the address from the transaction public key
       const sha256Hash = Hash.sha256(publicKeyFromTx)
       const ripemd160Hash = Hash.ripemd160(sha256Hash)
       const addressFromPublicKey = encodeBase58(ripemd160Hash)
 
-      // 比较：计算出的地址 vs UTXO 的所有者地址
-      console.log('从公钥计算的地址:', addressFromPublicKey)
-      console.log('UTXO 所有者地址:', aliceUTXO.ownerAddress)
+      // Compare the derived address with the UTXO owner address
+      console.log('Address derived from public key:', addressFromPublicKey)
+      console.log('UTXO owner address:', aliceUTXO.ownerAddress)
 
-      expect(addressFromPublicKey).toBe(bob.address) // 计算出的是 Bob 的地址
-      expect(addressFromPublicKey).not.toBe(aliceUTXO.ownerAddress) // 不是 Alice 的地址
+      expect(addressFromPublicKey).toBe(bob.address) // It is Bob's address
+      expect(addressFromPublicKey).not.toBe(aliceUTXO.ownerAddress) // It is not Alice's address
 
-      // 权限检查失败
+      // The authority check fails
       const hasPermission = addressFromPublicKey === aliceUTXO.ownerAddress
-      expect(hasPermission).toBe(false) // ✗ Bob 没有权限
+      expect(hasPermission).toBe(false) // ✗ Bob lacks permission
 
-      // 结论：
-      // 虽然 Bob 可以：
-      // ✓ 在交易中放入自己的公钥
-      // ✓ 用自己的私钥生成有效的签名
+      // Conclusion:
+      // Bob can:
+      // ✓ Include his public key in the transaction
+      // ✓ Produce a valid signature with his private key
       //
-      // 但是他不能：
-      // ✗ 花费 Alice 的 UTXO
+      // But he cannot:
+      // ✗ Spend Alice's UTXO
       //
-      // 因为：
-      // Bob 的公钥 → 计算出 Bob 的地址
-      // Bob 的地址 ≠ Alice 的地址（UTXO 所有者）
-      // → 系统拒绝交易
+      // Because:
+      // Bob's public key → Bob's address
+      // Bob's address ≠ Alice's address, which owns the UTXO
+      // → The system rejects the transaction
     })
 
-    it('对比：Alice 可以花费自己的 UTXO', () => {
+    it('allows Alice to spend her own UTXO', () => {
       const alice = new Wallet()
       const bob = new Wallet()
       const {Signature} = require('../../crypto/signature')
       const {Hash} = require('../../crypto/hash')
       const {encodeBase58} = require('../../utils/base58')
 
-      // Alice 有一个 UTXO
+      // Alice owns a UTXO
       const aliceUTXO = {
         txId: 'utxo_123',
         outputIndex: 0,
         amount: 100,
-        ownerAddress: alice.address, // 属于 Alice
+        ownerAddress: alice.address, // Belongs to Alice
       }
 
-      // Alice 创建交易
+      // Alice creates a transaction
       const aliceTransaction = {
         inputs: [
           {
             txId: aliceUTXO.txId,
             outputIndex: aliceUTXO.outputIndex,
-            publicKey: alice.publicKey, // Alice 放入自己的公钥
+            publicKey: alice.publicKey, // Alice supplies her public key
           },
         ],
         outputs: [
@@ -412,7 +412,7 @@ describe('Wallet', () => {
           },
           {
             amount: 50,
-            address: alice.address, // 找零
+            address: alice.address, // Return change
           },
         ],
       }
@@ -420,9 +420,9 @@ describe('Wallet', () => {
       const txData = JSON.stringify(aliceTransaction)
       const aliceSignature = alice.sign(txData)
 
-      // === 验证过程 ===
+      // === Verification process ===
 
-      // 第一步：验证签名
+      // Step 1: Verify the signature
       const publicKeyFromTx = aliceTransaction.inputs[0].publicKey
       const isSignatureValid = Signature.verify(
         txData,
@@ -431,26 +431,26 @@ describe('Wallet', () => {
       )
       expect(isSignatureValid).toBe(true) // ✓
 
-      // 第二步：验证权限
+      // Step 2: Verify spending authority
       const sha256Hash = Hash.sha256(publicKeyFromTx)
       const ripemd160Hash = Hash.ripemd160(sha256Hash)
       const addressFromPublicKey = encodeBase58(ripemd160Hash)
 
-      expect(addressFromPublicKey).toBe(alice.address) // 是 Alice 的地址
-      expect(addressFromPublicKey).toBe(aliceUTXO.ownerAddress) // 匹配 UTXO 所有者
+      expect(addressFromPublicKey).toBe(alice.address) // It is Alice's address
+      expect(addressFromPublicKey).toBe(aliceUTXO.ownerAddress) // It matches the UTXO owner
 
-      // 权限检查通过
+      // The authority check succeeds
       const hasPermission = addressFromPublicKey === aliceUTXO.ownerAddress
-      expect(hasPermission).toBe(true) // ✓ Alice 有权限
+      expect(hasPermission).toBe(true) // ✓ Alice has permission
 
-      // 交易有效！
+      // The transaction is valid
       const isTransactionValid = isSignatureValid && hasPermission
       expect(isTransactionValid).toBe(true)
     })
   })
 
-  describe('导出功能', () => {
-    it('应该能够导出钱包信息', () => {
+  describe('export', () => {
+    it('exports wallet data', () => {
       const wallet = new Wallet()
       const exported = wallet.export()
 
@@ -462,7 +462,7 @@ describe('Wallet', () => {
       expect(exported.address).toBe(wallet.address)
     })
 
-    it('导出的私钥可以用于恢复钱包', () => {
+    it('restores a wallet from the exported private key', () => {
       const wallet1 = new Wallet()
       const exported = wallet1.export()
 
@@ -474,7 +474,7 @@ describe('Wallet', () => {
   })
 
   describe('isValidAddress', () => {
-    it('应该验证有效的地址', () => {
+    it('accepts a valid address', () => {
       const wallet = new Wallet()
 
       const isValid = Wallet.isValidAddress(wallet.address)
@@ -482,27 +482,27 @@ describe('Wallet', () => {
       expect(isValid).toBe(true)
     })
 
-    it('应该拒绝空字符串', () => {
+    it('rejects an empty string', () => {
       expect(Wallet.isValidAddress('')).toBe(false)
     })
 
-    it('应该拒绝太短的地址', () => {
+    it('rejects an address that is too short', () => {
       expect(Wallet.isValidAddress('1234')).toBe(false)
     })
 
-    it('应该拒绝包含无效字符的地址', () => {
-      // 包含 0, O, I, l 等无效 Base58 字符
+    it('rejects an address containing invalid characters', () => {
+      // Include characters excluded from Base58: 0, O, I, and l
       expect(Wallet.isValidAddress('0OIl' + 'a'.repeat(30))).toBe(false)
     })
 
-    it('应该拒绝太长的地址', () => {
+    it('rejects an address that is too long', () => {
       const longAddress = '1' + 'a'.repeat(50)
       expect(Wallet.isValidAddress(longAddress)).toBe(false)
     })
   })
 
   describe('toString', () => {
-    it('应该返回可读的字符串表示', () => {
+    it('returns a readable string representation', () => {
       const wallet = new Wallet()
       const str = wallet.toString()
 
@@ -511,8 +511,8 @@ describe('Wallet', () => {
     })
   })
 
-  describe('边界情况', () => {
-    it('应该能够签名空字符串', () => {
+  describe('edge cases', () => {
+    it('signs an empty string', () => {
       const wallet = new Wallet()
 
       const signature = wallet.sign('')
@@ -521,7 +521,7 @@ describe('Wallet', () => {
       expect(isValid).toBe(true)
     })
 
-    it('应该能够处理长数据', () => {
+    it('handles long data', () => {
       const wallet = new Wallet()
       const longData = 'x'.repeat(10000)
 
