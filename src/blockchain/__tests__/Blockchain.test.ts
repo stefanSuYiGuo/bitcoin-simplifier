@@ -22,19 +22,19 @@ describe('Blockchain', () => {
     alice = new Wallet()
     bob = new Wallet()
 
-    // 创建创世区块
+    // Create the genesis block
     const coinbaseTx = Transaction.createCoinbase(miner.address, 50, 0)
     const genesisBlock = Block.createGenesisBlock(coinbaseTx)
     blockchain.initializeWithGenesisBlock(genesisBlock)
   })
 
-  describe('初始化', () => {
-    test('应该能创建创世区块', () => {
+  describe('initialization', () => {
+    test('creates a genesis block', () => {
       expect(blockchain.getLength()).toBe(1)
       expect(blockchain.getLatestBlock().index).toBe(0)
     })
 
-    test('不应该重复初始化', () => {
+    test('rejects repeated initialization', () => {
       const coinbaseTx = Transaction.createCoinbase(miner.address, 50, 0)
       const genesisBlock = Block.createGenesisBlock(coinbaseTx)
 
@@ -43,7 +43,7 @@ describe('Blockchain', () => {
       ).toThrow()
     })
 
-    test('创世区块索引必须为 0', () => {
+    test('requires the genesis block index to be 0', () => {
       const newBlockchain = new Blockchain()
       const coinbaseTx = Transaction.createCoinbase(miner.address, 50, 1)
       const block = new Block(1, '0', Date.now(), [coinbaseTx], 1)
@@ -52,8 +52,8 @@ describe('Blockchain', () => {
     })
   })
 
-  describe('添加区块', () => {
-    test('应该能添加有效的新区块', () => {
+  describe('adding blocks', () => {
+    test('adds a valid new block', () => {
       const minerInstance = new Miner(miner, blockchain)
       const {block} = minerInstance.mineEmptyBlock()
 
@@ -62,11 +62,11 @@ describe('Blockchain', () => {
       expect(blockchain.getLength()).toBe(2)
     })
 
-    test('应该拒绝索引错误的区块', () => {
+    test('rejects a block with an invalid index', () => {
       const latestBlock = blockchain.getLatestBlock()
       const coinbaseTx = Transaction.createCoinbase(miner.address, 50, 99)
       const invalidBlock = new Block(
-        99, // 错误的索引
+        99, // Invalid index
         latestBlock.hash,
         Date.now(),
         [coinbaseTx],
@@ -77,12 +77,12 @@ describe('Blockchain', () => {
       expect(success).toBe(false)
     })
 
-    test('应该拒绝前区块哈希错误的区块', () => {
+    test('rejects a block with an incorrect previous hash', () => {
       const latestBlock = blockchain.getLatestBlock()
       const coinbaseTx = Transaction.createCoinbase(miner.address, 50, 1)
       const invalidBlock = new Block(
         1,
-        'wrong_hash', // 错误的前区块哈希
+        'wrong_hash', // Incorrect previous block hash
         Date.now(),
         [coinbaseTx],
         1
@@ -93,13 +93,13 @@ describe('Blockchain', () => {
     })
   })
 
-  describe('UTXO 管理', () => {
-    test('创世区块应该创建初始 UTXO', () => {
+  describe('UTXO management', () => {
+    test('creates the initial UTXO from the genesis block', () => {
       const utxoSet = blockchain.getUTXOSet()
       expect(utxoSet.getBalance(miner.address)).toBe(50)
     })
 
-    test('挖矿应该更新 UTXO', () => {
+    test('updates UTXOs after mining', () => {
       const minerInstance = new Miner(miner, blockchain)
       const {block} = minerInstance.mineEmptyBlock()
       blockchain.addBlock(block)
@@ -108,13 +108,13 @@ describe('Blockchain', () => {
       expect(utxoSet.getBalance(miner.address)).toBe(100) // 50 + 50
     })
 
-    test('交易应该更新 UTXO', () => {
-      // 先挖一个区块，给矿工 50 BTC
+    test('updates UTXOs after a transaction', () => {
+      // Mine a block to award the miner 50 BTC
       const minerInstance = new Miner(miner, blockchain)
       const {block: firstBlock} = minerInstance.mineEmptyBlock()
       blockchain.addBlock(firstBlock)
 
-      // 矿工转账给 Alice
+      // Transfer funds from the miner to Alice
       const utxoSet = blockchain.getUTXOSet()
       const tx = TransactionBuilder.createSimpleTransfer(
         miner,
@@ -123,40 +123,40 @@ describe('Blockchain', () => {
         utxoSet
       )
 
-      // 挖包含交易的区块
+      // Mine a block containing the transaction
       const {block} = minerInstance.mineBlock([tx])
       blockchain.addBlock(block)
 
-      // 验证余额
+      // Verify balances
       const newUtxoSet = blockchain.getUTXOSet()
       expect(newUtxoSet.getBalance(alice.address)).toBe(30)
-      expect(newUtxoSet.getBalance(miner.address)).toBeGreaterThan(70) // 原来的找零 + 新的奖励
+      expect(newUtxoSet.getBalance(miner.address)).toBeGreaterThan(70) // Existing change plus the new reward
     })
   })
 
-  describe('难度调整', () => {
-    test('未到调整间隔应该保持难度', () => {
+  describe('difficulty adjustment', () => {
+    test('keeps the difficulty before the adjustment interval', () => {
       const initialDifficulty = blockchain.getLatestBlock().difficulty
       const nextDifficulty = blockchain.calculateNextDifficulty()
       expect(nextDifficulty).toBe(initialDifficulty)
     })
 
-    test('到达调整间隔应该计算新难度', () => {
+    test('calculates a new difficulty at the adjustment interval', () => {
       const minerInstance = new Miner(miner, blockchain)
 
-      // 挖 9 个区块（加上创世区块共 10 个）
+      // Mine 9 blocks for a total of 10 including the genesis block
       for (let i = 0; i < 9; i++) {
         const {block} = minerInstance.mineEmptyBlock()
         blockchain.addBlock(block)
       }
 
-      // 第 10 个区块应该触发难度调整
+      // The tenth block should trigger a difficulty adjustment
       const nextDifficulty = blockchain.calculateNextDifficulty()
       expect(nextDifficulty).toBeDefined()
     })
   })
 
-  describe('区块查询', () => {
+  describe('block queries', () => {
     beforeEach(() => {
       const minerInstance = new Miner(miner, blockchain)
       for (let i = 0; i < 3; i++) {
@@ -165,32 +165,32 @@ describe('Blockchain', () => {
       }
     })
 
-    test('应该能通过索引获取区块', () => {
+    test('gets a block by index', () => {
       const block = blockchain.getBlockByIndex(1)
       expect(block).not.toBeNull()
       expect(block!.index).toBe(1)
     })
 
-    test('应该能通过哈希获取区块', () => {
+    test('gets a block by hash', () => {
       const latestBlock = blockchain.getLatestBlock()
       const block = blockchain.getBlockByHash(latestBlock.hash)
       expect(block).not.toBeNull()
       expect(block!.hash).toBe(latestBlock.hash)
     })
 
-    test('不存在的索引应该返回 null', () => {
+    test('returns null for an unknown index', () => {
       const block = blockchain.getBlockByIndex(999)
       expect(block).toBeNull()
     })
 
-    test('不存在的哈希应该返回 null', () => {
+    test('returns null for an unknown hash', () => {
       const block = blockchain.getBlockByHash('nonexistent_hash')
       expect(block).toBeNull()
     })
   })
 
-  describe('区块链验证', () => {
-    test('有效的区块链应该通过验证', () => {
+  describe('blockchain validation', () => {
+    test('accepts a valid blockchain', () => {
       const minerInstance = new Miner(miner, blockchain)
       for (let i = 0; i < 3; i++) {
         const {block} = minerInstance.mineEmptyBlock()
@@ -201,8 +201,8 @@ describe('Blockchain', () => {
     })
   })
 
-  describe('统计信息', () => {
-    test('应该能获取区块链统计信息', () => {
+  describe('statistics', () => {
+    test('returns blockchain statistics', () => {
       const stats = blockchain.getStats()
 
       expect(stats).toHaveProperty('length')
@@ -211,7 +211,7 @@ describe('Blockchain', () => {
       expect(stats).toHaveProperty('utxoCount')
     })
 
-    test('应该能序列化为 JSON', () => {
+    test('serializes the blockchain to JSON', () => {
       const json = blockchain.toJSON()
 
       expect(json).toHaveProperty('chain')
