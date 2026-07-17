@@ -10,27 +10,27 @@ import merkleRouter from './routes/merkle'
 const app = express()
 const PORT = 3001
 
-// 中间件
+// Middleware
 app.use(cors())
 app.use(express.json())
 
-// 请求日志
+// Request logging
 app.use((req: Request, res: Response, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
   next()
 })
 
-// 初始化服务器状态
+// Initialize server state
 const state = ServerState.getInstance()
 
-// API 路由
+// API routes
 app.use('/api', blockchainRouter)
 app.use('/api', walletRouter)
 app.use('/api', transactionRouter)
 app.use('/api', miningRouter)
 app.use('/api', merkleRouter)
 
-// 健康检查
+// Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     success: true,
@@ -39,45 +39,45 @@ app.get('/health', (req: Request, res: Response) => {
   })
 })
 
-// 根路由
+// Root route
 app.get('/', (req: Request, res: Response) => {
   res.json({
     name: 'Simple Bitcoin API Server',
     version: '1.0.0',
     endpoints: {
       blockchain: {
-        'GET /api/blockchain': '获取完整区块链',
-        'GET /api/blockchain/stats': '获取统计信息',
-        'GET /api/blockchain/blocks/:index': '获取指定区块',
-        'GET /api/blockchain/blocks/:index/transactions': '获取区块交易',
-        'GET /api/blockchain/validate': '验证区块链',
+        'GET /api/blockchain': 'Get the complete blockchain',
+        'GET /api/blockchain/stats': 'Get blockchain statistics',
+        'GET /api/blockchain/blocks/:index': 'Get a block by index',
+        'GET /api/blockchain/blocks/:index/transactions': 'Get transactions from a block',
+        'GET /api/blockchain/validate': 'Validate the blockchain',
       },
       wallets: {
-        'GET /api/wallets': '获取所有钱包',
-        'POST /api/wallets': '创建新钱包',
-        'GET /api/wallets/:address': '获取钱包详情',
-        'GET /api/wallets/:address/balance': '获取钱包余额',
-        'GET /api/wallets/:address/utxos': '获取钱包 UTXO',
+        'GET /api/wallets': 'Get all wallets',
+        'POST /api/wallets': 'Create a wallet',
+        'GET /api/wallets/:address': 'Get wallet details',
+        'GET /api/wallets/:address/balance': 'Get a wallet balance',
+        'GET /api/wallets/:address/utxos': 'Get wallet UTXOs',
       },
       transactions: {
-        'POST /api/transactions': '创建交易',
-        'GET /api/transactions/pending': '获取待处理交易',
-        'GET /api/transactions/:txId': '获取交易详情',
-        'DELETE /api/transactions/pending': '清空待处理交易',
+        'POST /api/transactions': 'Create a transaction',
+        'GET /api/transactions/pending': 'Get pending transactions',
+        'GET /api/transactions/:txId': 'Get transaction details',
+        'DELETE /api/transactions/pending': 'Clear pending transactions',
       },
       mining: {
-        'POST /api/mine': '挖矿',
-        'GET /api/mine/difficulty': '获取难度',
+        'POST /api/mine': 'Mine a block',
+        'GET /api/mine/difficulty': 'Get mining difficulty',
       },
       merkle: {
-        'POST /api/merkle/verify': '验证 Merkle 证明',
-        'GET /api/merkle/tree/:blockIndex': '获取 Merkle 树',
+        'POST /api/merkle/verify': 'Verify a Merkle proof',
+        'GET /api/merkle/tree/:blockIndex': 'Get a Merkle tree',
       },
     },
   })
 })
 
-// 404 处理
+// 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -85,7 +85,7 @@ app.use((req: Request, res: Response) => {
   })
 })
 
-// 错误处理
+// Error handler
 app.use((err: any, req: Request, res: Response, next: any) => {
   console.error('Error:', err)
   res.status(500).json({
@@ -94,7 +94,7 @@ app.use((err: any, req: Request, res: Response, next: any) => {
   })
 })
 
-// 启动服务器
+// Start the server
 app.listen(PORT, () => {
   console.log('='.repeat(60))
   console.log('  Simple Bitcoin API Server')
