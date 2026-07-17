@@ -1,44 +1,44 @@
 import {Script, ScriptBuilder} from '../script'
 
 /**
- * 交易输出类
- * 表示交易的输出，包含金额和锁定脚本
- * 支持传统地址模式和脚本模式
+ * Transaction output.
+ * Contains an amount and a locking script.
+ * Supports both legacy address fields and scripts.
  */
 export class TxOutput {
-  /** 锁定脚本 (scriptPubKey) */
+  /** Locking script (scriptPubKey) */
   private _scriptPubKey?: Script
 
   /**
-   * @param amount 输出金额（单位：BTC）
-   * @param address 接收地址（传统模式）
+   * @param amount Output amount in BTC
+   * @param address Recipient address used by legacy mode
    */
   constructor(public readonly amount: number, public readonly address: string) {
     if (amount <= 0) {
-      throw new Error('输出金额必须大于 0')
+      throw new Error('Output amount must be greater than 0')
     }
     if (!address || address.trim().length === 0) {
-      throw new Error('接收地址不能为空')
+      throw new Error('Recipient address cannot be empty')
     }
   }
 
   /**
-   * 创建带脚本的输出
+   * Creates an output with a locking script.
    */
   static createWithScript(amount: number, scriptPubKey: Script): TxOutput {
-    // 从脚本中提取地址信息（用于向后兼容）
+    // Derive address information from the script for compatibility
     let address = 'script:' + scriptPubKey.toHex().substring(0, 16)
 
-    // 尝试从 P2PKH 脚本提取公钥哈希作为地址
+    // Use the public key hash from a P2PKH script as the address
     const pubKeyHash = ScriptBuilder.extractP2PKHPubKeyHash(scriptPubKey)
     if (pubKeyHash) {
       address = pubKeyHash
     }
 
-    // 尝试从 P2SH 脚本提取脚本哈希
+    // Extract the script hash from a P2SH script
     const scriptHash = ScriptBuilder.extractP2SHScriptHash(scriptPubKey)
     if (scriptHash) {
-      address = '3' + scriptHash.substring(0, 20) // P2SH 地址以 3 开头
+      address = '3' + scriptHash.substring(0, 20) // P2SH addresses begin with 3
     }
 
     const output = new TxOutput(amount, address)
@@ -47,55 +47,55 @@ export class TxOutput {
   }
 
   /**
-   * 设置锁定脚本 (scriptPubKey)
+   * Sets the locking script (scriptPubKey).
    */
   setScriptPubKey(scriptPubKey: Script): void {
     this._scriptPubKey = scriptPubKey
   }
 
   /**
-   * 获取锁定脚本
-   * 如果没有设置脚本，从地址推断生成 P2PKH 脚本
+   * Returns the locking script.
+   * Derives a P2PKH script from the address when none is set.
    */
   getScriptPubKey(): Script {
     if (this._scriptPubKey) {
       return this._scriptPubKey
     }
-    // 从地址生成 P2PKH 锁定脚本
-    // 注意：这里假设地址是公钥哈希，实际应该解码 Base58
+    // Build a P2PKH locking script from the address
+    // This simplified model treats the address as a public key hash instead of decoding Base58
     return ScriptBuilder.buildP2PKHLockingScript(this.address)
   }
 
   /**
-   * 获取脚本类型
+   * Returns the script type.
    */
   getScriptType(): string {
     return ScriptBuilder.getScriptType(this.getScriptPubKey())
   }
 
   /**
-   * 是否是 P2PKH 输出
+   * Returns whether this is a P2PKH output.
    */
   isP2PKH(): boolean {
     return ScriptBuilder.isP2PKH(this.getScriptPubKey())
   }
 
   /**
-   * 是否是 P2SH 输出
+   * Returns whether this is a P2SH output.
    */
   isP2SH(): boolean {
     return ScriptBuilder.isP2SH(this.getScriptPubKey())
   }
 
   /**
-   * 是否是 OP_RETURN 输出（不可花费）
+   * Returns whether this is an unspendable OP_RETURN output.
    */
   isOpReturn(): boolean {
     return ScriptBuilder.isOpReturn(this.getScriptPubKey())
   }
 
   /**
-   * 转换为 JSON 对象
+   * Converts the output to a JSON object.
    */
   toJSON(): {amount: number; address: string; scriptPubKey?: string} {
     const json: any = {
@@ -109,7 +109,7 @@ export class TxOutput {
   }
 
   /**
-   * 从 JSON 对象创建
+   * Creates an output from a JSON object.
    */
   static fromJSON(json: {
     amount: number
@@ -124,14 +124,14 @@ export class TxOutput {
   }
 
   /**
-   * 转换为字符串（用于哈希计算）
+   * Serializes the output for hashing.
    */
   toString(): string {
     return JSON.stringify(this.toJSON())
   }
 
   /**
-   * 克隆输出
+   * Creates a copy of the output.
    */
   clone(): TxOutput {
     const cloned = new TxOutput(this.amount, this.address)
